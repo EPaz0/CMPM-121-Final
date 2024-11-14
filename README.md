@@ -1,6 +1,6 @@
 # CMPM-121-Final
 
-# Devlog Entry - 11/13/24”
+# Devlog Entry - 11/13/24
 ## Introducing the team
 
 Tools Lead: Enrique Paz
