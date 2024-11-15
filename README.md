@@ -10,15 +10,8 @@ Design Lead: Lyle Watkins
 
 
 ## Tools and materials
-With about one paragraph each...
+We are going to be using typescript and baseline web platforms because they are things we have been using and are class and familiar to us right now. We will be using VSCode for our IDE because it’s easy to use and we are most familiar with it. Lyle will use Procreate to create visual assets because it has a built-in animation editor and they have been using it for years. Our alternate platform choice is PixieJS and we chose it because we don't like Phaser and want to try something new.
 
-Tell us about what engines, libraries, frameworks, and or platforms you intend to use, and give us a tiny bit of detail about why your team chose those.
-Tell us programming languages (e.g. TypeScript) and data languages (e.g. JSON) you team expects to use and why you chose them. Presumably you’ll just be using the languages expected by your previously chosen engine/platform.
-Tell us about which tools you expect to use in the process of authoring your project. You might name the IDE for writing code, the image editor for creating visual assets, or the 3D editor you will use for building your scene. Again, briefly tell us why you made these choices. Maybe one of your teammates feels especially skilled in that tool or it represents something you all want to learn about.
-Tell us about your alternate platform choice. Remember, your alternate platform must differ from your primary platform by either changing the primary primarily language used or the engine/library/framework used for building your user interface.
+
 ## Outlook
-Give us a short section on your outlook on the project. You might cover one or more of these topics:
-
-What is your team hoping to accomplish that other teams might not attempt?
-What do you anticipate being the hardest or riskiest part of the project?
-What are you hoping to learn by approaching the project with the tools and materials you selected above?
+One thing we anticipate being a hard part of the project is setting up our game visually while using HTML. Also, another thing we anticipate being hard/risky is having our game break during the switch if there is one. We are hoping to learn how to use our alternate platform PixieJS and also learn how to create a game without an engine.
