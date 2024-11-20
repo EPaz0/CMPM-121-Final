@@ -1,6 +1,5 @@
 const canvas = document.getElementById('gameCanvas') as HTMLCanvasElement;
 const ctx = canvas.getContext('2d');
-
 // Add a popup element to your HTML file
 const popup = document.createElement('div');
 popup.style.position = 'absolute';
@@ -9,8 +8,6 @@ popup.style.border = '1px solid black';
 popup.style.padding = '10px';
 popup.style.display = 'none'; // Initially hidden
 document.body.appendChild(popup);
-
-
 //let x = 0;
 
 const playerCoordinates = {col: 0, row: 0}; 
@@ -72,6 +69,15 @@ function drawPlayer(ctx: CanvasRenderingContext2D) {
   ctx.fillRect(cellX, cellY, gridSize, gridSize);
 }
 
+function updateCellInfo(cell: Cell) {
+  const cellInfoDiv = document.getElementById('cell-info');
+  if (cellInfoDiv) {
+    cellInfoDiv.innerText = `Cell Info:
+Row: ${playerCoordinates.row}
+Col: ${playerCoordinates.col}`;
+  }
+}
+
 function playerMovement(event: KeyboardEvent) {
   let newRow = playerCoordinates.row;
   let newCol = playerCoordinates.col;
@@ -103,6 +109,8 @@ function playerMovement(event: KeyboardEvent) {
     playerCoordinates.row = newRow;
     playerCoordinates.col = newCol;
   }
+  const currentCell = grid[newRow][newCol];
+  updateCellInfo(currentCell);
 }
 document.addEventListener('keydown', playerMovement);
 
@@ -210,6 +218,7 @@ function update() {
   }
 };
 
+updateCellInfo(grid[playerCoordinates.row][playerCoordinates.col]);
 update();
 
 function dailyUpdate() {
