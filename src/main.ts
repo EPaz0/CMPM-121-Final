@@ -1,14 +1,12 @@
 const canvas = document.getElementById('gameCanvas') as HTMLCanvasElement;
 const ctx = canvas.getContext('2d');
-// Add a popup element to your HTML file
 const popup = document.createElement('div');
 popup.style.position = 'absolute';
 popup.style.backgroundColor = 'white';
 popup.style.border = '1px solid black';
 popup.style.padding = '10px';
-popup.style.display = 'none'; // Initially hidden
+popup.style.display = 'none'; 
 document.body.appendChild(popup);
-//let x = 0;
 
 const playerCoordinates = {col: 0, row: 0}; 
 
@@ -64,17 +62,23 @@ function drawGrid(ctx : CanvasRenderingContext2D) {
 
 function drawPlayer(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = 'red';
-  const cellX = playerCoordinates.col * gridSize;
+  const cellX = playerCoordinates.col * gridSize + 50;
   const cellY = playerCoordinates.row * gridSize;
-  ctx.fillRect(cellX, cellY, gridSize, gridSize);
+  ctx.fillRect(cellX, cellY, 50, 50);
 }
 
 function updateCellInfo(cell: Cell) {
   const cellInfoDiv = document.getElementById('cell-info');
   if (cellInfoDiv) {
-    cellInfoDiv.innerText = `Cell Info:
-Row: ${playerCoordinates.row}
-Col: ${playerCoordinates.col}`;
+    cellInfoDiv.innerText = `Cell ${playerCoordinates.row}, ${playerCoordinates.col}:
+    ☀Sunlight: ${cell.sunlight}
+    🍎Food: ${cell.food}
+    🐟Fish: ${cell.fishPopulation.length}`;
+    if(cell.fishPopulation.length > 0){
+      cell.fishPopulation.forEach(fish => {
+        cellInfoDiv.innerText += `\nFish Type: ${fish.type}, Growth: ${fish.growth}, Food: ${fish.food}`;
+      });
+    }
   }
 }
 
@@ -160,7 +164,7 @@ function updateFishGrowth() {
           fish.food -= 1;
           if (fish.food <= 0) {
             const index = cell.fishPopulation.indexOf(fish);
-            cell.fishPopulation.splice(index, 1); // Remove fish
+            cell.fishPopulation.splice(index, 1); 
           }
         }
       });
@@ -222,33 +226,30 @@ updateCellInfo(grid[playerCoordinates.row][playerCoordinates.col]);
 update();
 
 function dailyUpdate() {
-  updateSunlight(); // Adjust sunlight for all tiles
-  regenerateFood(); // Replenish food based on sunlight
+  updateSunlight(); 
+  regenerateFood(); 
   updateFishGrowth();
   updateFishReproduction();
+  updateCellInfo(grid[playerCoordinates.row][playerCoordinates.col]);
 }
 
-// Handle time advancement when the spacebar is pressed
 document.addEventListener('keydown', (event) => {
   if (event.code === 'Space') {
     dailyUpdate();
   }
 });
 
-// Click Event to see fish details in cell
 canvas.addEventListener('click', (event) => {
   const rect = canvas.getBoundingClientRect();
-  const mouseX = event.clientX - rect.left; // X coordinate relative to canvas
-  const mouseY = event.clientY - rect.top;  // Y coordinate relative to canvas
+  const mouseX = event.clientX - rect.left; 
+  const mouseY = event.clientY - rect.top;  
 
-  // Calculate the clicked grid cell
   const clickedCol = Math.floor(mouseX / gridSize);
   const clickedRow = Math.floor(mouseY / gridSize);
 
-  // Get the clicked cell
   const clickedCell = grid[clickedRow][clickedCol];
 
-  // Display fish details in the popup
+  
   if (clickedCell.fishPopulation.length > 0) {
     const fishDetails = clickedCell.fishPopulation.map((fish, index) =>
       `Fish ${index + 1}: Type=${fish.type}, Growth=${fish.growth}, Food=${fish.food}`
@@ -259,15 +260,14 @@ canvas.addEventListener('click', (event) => {
     popup.innerHTML = `<strong>Cell (${clickedRow}, ${clickedCol})</strong><br>No fish in this cell.`;
   }
 
-  // Position the popup near the mouse cursor
   popup.style.left = `${event.clientX + 10}px`;
   popup.style.top = `${event.clientY + 10}px`;
-  popup.style.display = 'block'; // Show the popup
+  popup.style.display = 'block'; 
 });
 
-// Hide the popup when clicking anywhere else
+
 document.addEventListener('click', (event) => {
   if (event.target !== canvas) {
-    popup.style.display = 'none'; // Hide the popup
+    popup.style.display = 'none'; 
   }
 });
