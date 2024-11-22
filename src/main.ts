@@ -155,8 +155,7 @@ function updateFishGrowth() {
     row.forEach((cell) => {
       cell.population.forEach((fish) => {
         if (cell.food > 0) {
-          fish.food++; // Fish eat food
-          if (fish.food > 3) fish.food = 3; // Cap food level at 3
+          fish.food = Math.min(3, fish.food + 1); // Fish food level capped at 3
           cell.food--;
 
           // Growth depends on fish type and food level
@@ -165,7 +164,7 @@ function updateFishGrowth() {
           else if (fish.food === 2) fish.growth += 2 * growthRate;
           else if (fish.food === 1) fish.growth += 1 * growthRate;
 
-          if (fish.growth > 10) fish.growth = 10; // Cap growth at 10
+          fish.growth = Math.min(10, fish.growth); // Cap growth at 10
         } else {
           // If no food, fish dies
           fish.food -= 1;
@@ -235,10 +234,10 @@ updateCellInfo(grid[playerCoordinates.row][playerCoordinates.col]);
 update();
 
 function dailyUpdate() {
-  updateSunlight();
   regenerateFood();
   updateFishGrowth();
   updateFishReproduction();
+  updateSunlight();
   updateCellInfo(grid[playerCoordinates.row][playerCoordinates.col]);
 }
 
