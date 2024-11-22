@@ -155,8 +155,9 @@ function updateFishGrowth() {
     row.forEach((cell) => {
       cell.population.forEach((fish) => {
         if (cell.food > 0) {
-          fish.food = Math.max(0, fish.food - 1); // Fish eat food
-          cell.food = Math.max(0, cell.food - 1);
+          fish.food++; // Fish eat food
+          if (fish.food > 3) fish.food = 3; // Cap food level at 3
+          cell.food--;
 
           // Growth depends on fish type and food level
           const growthRate = fishTypes[fish.type].growthMultiplier;
@@ -164,9 +165,9 @@ function updateFishGrowth() {
           else if (fish.food === 2) fish.growth += 2 * growthRate;
           else if (fish.food === 1) fish.growth += 1 * growthRate;
 
-          fish.growth = Math.min(10, fish.growth); // Cap growth at 10
+          if (fish.growth > 10) fish.growth = 10; // Cap growth at 10
         } else {
-          // If no food, fish die
+          // If no food, fish dies
           fish.food -= 1;
           if (fish.food <= 0) {
             const index = cell.population.indexOf(fish);
@@ -190,8 +191,8 @@ function getFishOfType(cell: Cell, type: string) {
 }
 
 function updateFishReproduction() {
-  grid.forEach((row, rowIndex) => {
-    row.forEach((cell, colIndex) => {
+  grid.forEach((row) => {
+    row.forEach((cell) => {
       if (cell.population.length >= 2 && cell.food > 0) {
         const newGreen = Math.floor(getFishOfType(cell, "green").length / 2);
         const newYellow = Math.floor(getFishOfType(cell, "yellow").length / 2);
