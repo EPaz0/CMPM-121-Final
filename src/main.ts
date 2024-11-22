@@ -139,13 +139,15 @@ function regenerateFood() {
   });
 }
 
-function addFish(cell: Cell, type: "green" | "yellow" | "red") {
-  const fish = {
-    type: type,
-    growth: 0,
-    food: 3, // Start with full food
-  };
-  cell.population.push(fish);
+function addFish(cell: Cell, type: "green" | "yellow" | "red", num: number) {
+  for (let i = 0; i < num; i++) {
+    const fish = {
+      type: type,
+      growth: 0,
+      food: 3, // Start with full food
+    };
+    cell.population.push(fish);
+  }
 }
 
 function updateFishGrowth() {
@@ -176,40 +178,44 @@ function updateFishGrowth() {
   });
 }
 
+// Returns an array of a certain type of fish in a given cell
+function getFishOfType(cell: Cell, type: string) {
+  const fish: Fish[] = [];
+  for (let i = 0; i < cell.population.length; i++) {
+    if (cell.population[i].type == type) {
+      fish.push(cell.population[i]);
+    }
+  }
+  return fish;
+}
+
 function updateFishReproduction() {
   grid.forEach((row, rowIndex) => {
     row.forEach((cell, colIndex) => {
       if (cell.population.length >= 2 && cell.food > 0) {
-        // Check for enough food in neighboring cells for reproduction
-        const neighbors = [
-          grid[rowIndex - 1]?.[colIndex], // Top
-          grid[rowIndex + 1]?.[colIndex], // Bottom
-          grid[rowIndex]?.[colIndex - 1], // Left
-          grid[rowIndex]?.[colIndex + 1], // Right
-        ].filter(Boolean); // Filter out undefined neighbors
-
-        neighbors.forEach((neighbor) => {
-          if (neighbor && neighbor.food > 0) {
-            addFish(neighbor, "green"); // Add a green fish (or other logic for type)
-            neighbor.food--; // Deduct food for the new fish
-          }
-        });
+        const newGreen = Math.floor(getFishOfType(cell, "green").length / 2);
+        const newYellow = Math.floor(getFishOfType(cell, "yellow").length / 2);
+        const newRed = Math.floor(getFishOfType(cell, "red").length / 2);
+        addFish(cell, "green", newGreen); // Add one green fish per green fish pair
+        addFish(cell, "yellow", newYellow); // Add one yellow fish per yellow fish pair
+        addFish(cell, "red", newRed); // Add one red fish per red fish pair
       }
     });
   });
 }
 
+// Initialize starting fish at random
 grid.forEach((row) => {
   row.forEach((cell) => {
     if (Math.random() > 0.5) { // 50% chance to add a fish
-      addFish(cell, "green");
+      addFish(cell, "green", 2);
     }
     if (Math.random() > 0.65) { // 25% chance to add a fish
-      addFish(cell, "yellow");
+      addFish(cell, "yellow", 1);
     }
 
     if (Math.random() > 0.98) { // 2% chance to add a fish
-      addFish(cell, "red");
+      addFish(cell, "red", 1);
     }
   });
 });
