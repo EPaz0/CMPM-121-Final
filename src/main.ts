@@ -1,3 +1,6 @@
+// Import useful functions
+import { createButton, createHeading } from "./utils.ts";
+
 const canvas = document.getElementById("gameCanvas") as HTMLCanvasElement;
 const ctx = canvas.getContext("2d");
 const popup = document.createElement("div");
@@ -7,6 +10,36 @@ popup.style.border = "1px solid black";
 popup.style.padding = "10px";
 popup.style.display = "none";
 document.body.appendChild(popup);
+
+const headerDiv = document.querySelector<HTMLDivElement>("#header")!;
+const shopDiv = document.querySelector<HTMLDivElement>("#shop")!;
+
+createHeading({
+  text: "Game Name TBD",
+  div: headerDiv,
+  size: "h1",
+});
+
+let money = 0;
+const moneyDisplay = createHeading({
+  text: `💵: ${money}`,
+  div: headerDiv,
+  size: "h2",
+});
+
+createHeading({
+  text: "Shop",
+  div: shopDiv,
+  size: "h2",
+});
+
+createButton({
+  text: "Next Day",
+  div: headerDiv,
+  onClick: () => {
+    dailyUpdate();
+  },
+});
 
 const playerCoordinates = { col: 0, row: 0 };
 
@@ -19,16 +52,36 @@ interface Cell {
 }
 
 interface Fish {
-  type: "green" | "yellow" | "red";
+  type: "Green" | "Yellow" | "Red";
   growth: number; // 0-10
   food: number; // 0-3
 }
 
 const fishTypes = {
-  green: { cost: 5, growthMultiplier: 1, valueRange: [15, 35] },
-  yellow: { cost: 10, growthMultiplier: 0.75, valueRange: [30, 50] },
-  red: { cost: 20, growthMultiplier: 0.5, valueRange: [50, 70] },
+  Green: { cost: 5, growthMultiplier: 1, valueRange: [15, 35] },
+  Yellow: { cost: 10, growthMultiplier: 0.75, valueRange: [30, 50] },
+  Red: { cost: 20, growthMultiplier: 0.5, valueRange: [50, 70] },
 };
+
+// Create shop buttons
+createButton({
+  text: "Buy Green Fish",
+  div: shopDiv,
+  onClick: () => {
+  },
+});
+createButton({
+  text: "Buy Yellow Fish",
+  div: shopDiv,
+  onClick: () => {
+  },
+});
+createButton({
+  text: "Buy Red Fish",
+  div: shopDiv,
+  onClick: () => {
+  },
+});
 
 const rows = 4;
 const cols = 5;
@@ -50,7 +103,7 @@ const grid: Cell[][] = Array.from(
 
 function drawCell(ctx: CanvasRenderingContext2D, cell: Cell) {
   if (ctx) {
-    ctx.fillStyle = "green";
+    ctx.fillStyle = "Green";
     ctx.strokeRect(cell.x, cell.y, gridSize, gridSize);
     ctx.strokeText(`☀${cell.sunlight}`, cell.x + 5, cell.y + 15);
     ctx.strokeText(`🍎${cell.food}`, cell.x + 5, cell.y + 30);
@@ -63,7 +116,7 @@ function drawGrid(ctx: CanvasRenderingContext2D) {
 }
 
 function drawPlayer(ctx: CanvasRenderingContext2D) {
-  ctx.fillStyle = "red";
+  ctx.fillStyle = "Red";
   const cellX = playerCoordinates.col * gridSize + 50;
   const cellY = playerCoordinates.row * gridSize;
   ctx.fillRect(cellX, cellY, 50, 50);
@@ -139,7 +192,7 @@ function regenerateFood() {
   });
 }
 
-function addFish(cell: Cell, type: "green" | "yellow" | "red", num: number) {
+function addFish(cell: Cell, type: "Green" | "Yellow" | "Red", num: number) {
   for (let i = 0; i < num; i++) {
     const fish = {
       type: type,
@@ -193,12 +246,12 @@ function updateFishReproduction() {
   grid.forEach((row) => {
     row.forEach((cell) => {
       if (cell.population.length >= 2 && cell.food > 0) {
-        const newGreen = Math.floor(getFishOfType(cell, "green").length / 2);
-        const newYellow = Math.floor(getFishOfType(cell, "yellow").length / 2);
-        const newRed = Math.floor(getFishOfType(cell, "red").length / 2);
-        addFish(cell, "green", newGreen); // Add one green fish per green fish pair
-        addFish(cell, "yellow", newYellow); // Add one yellow fish per yellow fish pair
-        addFish(cell, "red", newRed); // Add one red fish per red fish pair
+        const newGreen = Math.floor(getFishOfType(cell, "Green").length / 2);
+        const newYellow = Math.floor(getFishOfType(cell, "Yellow").length / 2);
+        const newRed = Math.floor(getFishOfType(cell, "Red").length / 2);
+        addFish(cell, "Green", newGreen); // Add one green fish per green fish pair
+        addFish(cell, "Yellow", newYellow); // Add one yellow fish per yellow fish pair
+        addFish(cell, "Red", newRed); // Add one red fish per red fish pair
       }
     });
   });
@@ -208,14 +261,14 @@ function updateFishReproduction() {
 grid.forEach((row) => {
   row.forEach((cell) => {
     if (Math.random() > 0.5) { // 50% chance to add a fish
-      addFish(cell, "green", 2);
+      addFish(cell, "Green", 2);
     }
     if (Math.random() > 0.65) { // 25% chance to add a fish
-      addFish(cell, "yellow", 1);
+      addFish(cell, "Yellow", 1);
     }
 
     if (Math.random() > 0.98) { // 2% chance to add a fish
-      addFish(cell, "red", 1);
+      addFish(cell, "Red", 1);
     }
   });
 });
@@ -258,10 +311,8 @@ canvas.addEventListener("click", (event) => {
   const clickedCell = grid[clickedRow][clickedCol];
 
   if (clickedCell.population.length > 0) {
-    const fishDetails = clickedCell.population.map((fish, index) =>
-      `Fish ${
-        index + 1
-      }: Type=${fish.type}, Growth=${fish.growth}, Food=${fish.food}`
+    const fishDetails = clickedCell.population.map((fish) =>
+      `${fish.type} Fish | Growth: ${fish.growth}/10, Food: ${fish.food}/3`
     ).join("<br>");
 
     popup.innerHTML =
