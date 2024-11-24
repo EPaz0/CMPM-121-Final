@@ -20,12 +20,17 @@ createHeading({
   size: "h1",
 });
 
-let money = 0;
+const STARTING_MONEY = 100;
+let money = STARTING_MONEY;
 const moneyDisplay = createHeading({
   text: `💵: ${money}`,
   div: headerDiv,
   size: "h2",
 });
+function changeMoney(change: number) {
+  money += change;
+  moneyDisplay.innerHTML = `💵: ${money}`;
+}
 
 createHeading({
   text: "Shop",
@@ -51,37 +56,45 @@ interface Cell {
   population: Fish[];
 }
 
+type FishTypeName = "Green" | "Yellow" | "Red";
+
+interface FishType {
+  typeName: FishTypeName;
+  cost: number;
+  growthMultiplier: number;
+  minValueGain: number;
+  maxValueGain: number;
+}
+
 interface Fish {
-  type: "Green" | "Yellow" | "Red";
+  type: FishType;
   growth: number; // 0-10
   food: number; // 0-3
 }
 
-const fishTypes = {
-  Green: { cost: 5, growthMultiplier: 1, valueRange: [15, 35] },
-  Yellow: { cost: 10, growthMultiplier: 0.75, valueRange: [30, 50] },
-  Red: { cost: 20, growthMultiplier: 0.5, valueRange: [50, 70] },
-};
-
-// Create shop buttons
-createButton({
-  text: "Buy Green Fish",
-  div: shopDiv,
-  onClick: () => {
+const fishTypes: FishType[] = [
+  {
+    typeName: "Green",
+    cost: 5,
+    growthMultiplier: 1,
+    minValueGain: 1,
+    maxValueGain: 3,
   },
-});
-createButton({
-  text: "Buy Yellow Fish",
-  div: shopDiv,
-  onClick: () => {
+  {
+    typeName: "Yellow",
+    cost: 10,
+    growthMultiplier: .75,
+    minValueGain: 2,
+    maxValueGain: 4,
   },
-});
-createButton({
-  text: "Buy Red Fish",
-  div: shopDiv,
-  onClick: () => {
+  {
+    typeName: "Red",
+    cost: 20,
+    growthMultiplier: .5,
+    minValueGain: 3,
+    maxValueGain: 5,
   },
-});
+];
 
 const rows = 4;
 const cols = 5;
@@ -126,18 +139,34 @@ function updateCellInfo(cell: Cell) {
   const cellInfoDiv = document.getElementById("cell-info");
   if (cellInfoDiv) {
     cellInfoDiv.innerText =
-      `Cell ${playerCoordinates.row}, ${playerCoordinates.col}:
+      `Cell (${playerCoordinates.row}, ${playerCoordinates.col})
     ☀Sunlight: ${cell.sunlight}
     🍎Food: ${cell.food}
     🐟Fish: ${cell.population.length}`;
     if (cell.population.length > 0) {
       cell.population.forEach((fish) => {
         cellInfoDiv.innerText +=
-          `\nFish Type: ${fish.type}, Growth: ${fish.growth}, Food: ${fish.food}`;
+          `\n${fish.type.typeName} Fish | Growth: ${fish.growth}/10, Food: ${fish.food}/3`;
       });
     }
   }
 }
+
+// Create shop buttons
+fishTypes.forEach((fishType) => {
+  createButton({
+    text: `Buy ${fishType.typeName} Fish`,
+    div: shopDiv,
+    onClick: () => {
+      if (money >= fishType.cost) {
+        changeMoney(-fishType.cost);
+        const currentCell = grid[playerCoordinates.row][playerCoordinates.col];
+        addFish(currentCell, fishType, 1);
+        updateCellInfo(currentCell);
+      }
+    },
+  });
+});
 
 function playerMovement(event: KeyboardEvent) {
   let newRow = playerCoordinates.row;
@@ -192,7 +221,7 @@ function regenerateFood() {
   });
 }
 
-function addFish(cell: Cell, type: "Green" | "Yellow" | "Red", num: number) {
+function addFish(cell: Cell, type: FishType, num: number) {
   for (let i = 0; i < num; i++) {
     const fish = {
       type: type,
@@ -212,7 +241,7 @@ function updateFishGrowth() {
           cell.food--;
 
           // Growth depends on fish type and food level
-          const growthRate = fishTypes[fish.type].growthMultiplier;
+          const growthRate = fish.type.growthMultiplier;
           if (fish.food === 3) fish.growth += 3 * growthRate;
           else if (fish.food === 2) fish.growth += 2 * growthRate;
           else if (fish.food === 1) fish.growth += 1 * growthRate;
@@ -221,7 +250,7 @@ function updateFishGrowth() {
         } else {
           // If no food, fish dies
           fish.food -= 1;
-          if (fish.food <= 0) {
+          if (fish.food < 0) {
             const index = cell.population.indexOf(fish);
             cell.population.splice(index, 1);
           }
@@ -232,10 +261,10 @@ function updateFishGrowth() {
 }
 
 // Returns an array of a certain type of fish in a given cell
-function getFishOfType(cell: Cell, type: string) {
+function getFishOfType(cell: Cell, typeName: FishTypeName) {
   const fish: Fish[] = [];
   for (let i = 0; i < cell.population.length; i++) {
-    if (cell.population[i].type == type) {
+    if (cell.population[i].type.typeName == typeName) {
       fish.push(cell.population[i]);
     }
   }
@@ -249,29 +278,29 @@ function updateFishReproduction() {
         const newGreen = Math.floor(getFishOfType(cell, "Green").length / 2);
         const newYellow = Math.floor(getFishOfType(cell, "Yellow").length / 2);
         const newRed = Math.floor(getFishOfType(cell, "Red").length / 2);
-        addFish(cell, "Green", newGreen); // Add one green fish per green fish pair
-        addFish(cell, "Yellow", newYellow); // Add one yellow fish per yellow fish pair
-        addFish(cell, "Red", newRed); // Add one red fish per red fish pair
+        addFish(cell, fishTypes[0], newGreen); // Add one green fish per green fish pair
+        addFish(cell, fishTypes[1], newYellow); // Add one yellow fish per yellow fish pair
+        addFish(cell, fishTypes[3], newRed); // Add one red fish per red fish pair
       }
     });
   });
 }
 
 // Initialize starting fish at random
-grid.forEach((row) => {
-  row.forEach((cell) => {
-    if (Math.random() > 0.5) { // 50% chance to add a fish
-      addFish(cell, "Green", 2);
-    }
-    if (Math.random() > 0.65) { // 25% chance to add a fish
-      addFish(cell, "Yellow", 1);
-    }
+// grid.forEach((row) => {
+//   row.forEach((cell) => {
+//     if (Math.random() > 0.5) { // 50% chance to add a fish
+//       addFish(cell, "Green", 2);
+//     }
+//     if (Math.random() > 0.65) { // 25% chance to add a fish
+//       addFish(cell, "Yellow", 1);
+//     }
 
-    if (Math.random() > 0.98) { // 2% chance to add a fish
-      addFish(cell, "Red", 1);
-    }
-  });
-});
+//     if (Math.random() > 0.98) { // 2% chance to add a fish
+//       addFish(cell, "Red", 1);
+//     }
+//   });
+// });
 
 function update() {
   if (ctx) {
@@ -312,7 +341,7 @@ canvas.addEventListener("click", (event) => {
 
   if (clickedCell.population.length > 0) {
     const fishDetails = clickedCell.population.map((fish) =>
-      `${fish.type} Fish | Growth: ${fish.growth}/10, Food: ${fish.food}/3`
+      `${fish.type.typeName} Fish | Growth: ${fish.growth}/10, Food: ${fish.food}/3`
     ).join("<br>");
 
     popup.innerHTML =
