@@ -15,20 +15,50 @@ document.body.append(popup);
 
 const headerDiv = document.querySelector<HTMLDivElement>("#header")!;
 const shopDiv = document.querySelector<HTMLDivElement>("#shop")!;
+const objectivesDiv = document.querySelector<HTMLDivElement>("#objectives")!;
 
 // Modifiable gameplay values
 const STARTING_MONEY = 15;
 const BASE_FISH_COST = 15;
 const REPRODUCTION_CHANCE = 0.2;
+const SUNLIGHT_CHANGE_CHANCE = 0.4;
 const FISH_MAX_FOOD = 3;
 const FISH_MAX_GROWTH = 10;
+const CELL_FISH_CAPACITY = 5; // The threshold at which fish can no longer reach max size
+const CAPACITY_PENALTY = 2; // The amount by which max growth decreases for each fish above capacity
 const CELL_MAX_FOOD = 10;
 const CELL_MAX_SUNLIGHT = 10;
 
+// Game title heading
 createHeading({
-  text: "Game Name TBD",
+  text: "Fish Farm",
   div: headerDiv,
   size: "h1",
+});
+
+createHeading({
+  text: "Shop",
+  div: shopDiv,
+  size: "h2",
+});
+
+createHeading({ text: "Objectives", div: objectivesDiv, size: "h2" });
+
+let day = 0;
+const dayDisplay = createHeading({
+  text: `Day ${day}`,
+  div: headerDiv,
+  size: "h3",
+});
+dayDisplay.style.display = "inline";
+dayDisplay.style.marginRight = "20px";
+
+createButton({
+  text: "Next Day",
+  div: headerDiv,
+  onClick: () => {
+    nextDay();
+  },
 });
 
 let money = STARTING_MONEY;
@@ -38,25 +68,12 @@ const moneyDisplay = createHeading({
   div: headerDiv,
   size: "h2",
 });
+moneyDisplay.style.display = "inline";
 
 function changeMoney(change: number) {
   money += change;
-  moneyDisplay.innerHTML = `💵: ${money}`;
+  moneyDisplay.innerHTML = `💵 ${money}`;
 }
-
-createHeading({
-  text: "Shop",
-  div: shopDiv,
-  size: "h2",
-});
-
-createButton({
-  text: "Next Day",
-  div: headerDiv,
-  onClick: () => {
-    dailyUpdate();
-  },
-});
 
 const playerCoordinates = { col: 0, row: 0 };
 
@@ -80,8 +97,8 @@ interface FishType {
 
 interface Fish {
   type: FishType;
-  growth: number; // 0-10
-  food: number; // 0-3
+  growth: number;
+  food: number;
   value: number;
 }
 
@@ -183,7 +200,7 @@ function addFish(cell: Cell, type: FishType, num: number) {
     const fish = {
       type: type,
       growth: 0,
-      food: FISH_MAX_FOOD, // Start with full food
+      food: 0, // Start with empty food
       value: Math.floor(type.cost / 2), // Value starts at half of what you bought it for
     };
     cell.population.push(fish);
@@ -244,17 +261,21 @@ function playerMovement(event: KeyboardEvent) {
   }
   const currentCell = grid[newRow][newCol];
   updateCellInfo(currentCell);
+  popup.style.display = "none"; // Remove popup when player moves
 }
 document.addEventListener("keydown", playerMovement);
 
 function updateSunlight() {
   grid.forEach((row) => {
     row.forEach((cell) => {
-      const change = Math.random() < 0.5 ? 0 : Math.random() < 0.5 ? -1 : 1; // Randomly decide to increase or decrease sunlight, or keep it the same
+      // Randomly decide to increase or decrease sunlight, or keep it the same
+      const randChange = Math.random() < 0.5 ? -1 : 1;
+      const change = Math.random() < SUNLIGHT_CHANGE_CHANCE ? 0 : randChange;
+      // Ensure sunlight is between 1 and maximum
       cell.sunlight = Math.max(
         1,
         Math.min(CELL_MAX_SUNLIGHT, cell.sunlight + change),
-      ); // Ensure sunlight is between 1 and maximum
+      );
     });
   });
 }
@@ -275,11 +296,18 @@ function updateFishGrowth() {
           fish.food = Math.min(FISH_MAX_FOOD, fish.food + 1); // Fish food level capped at 3
           cell.food--;
 
-          // Growth depends on fish type and food level
+          // Growth depends on fish type, food level, and amount of fish in cell
+          const fishOverMax = cell.population.length - CELL_FISH_CAPACITY;
+          // Max growth goes down for every fish over the maximum cell capacity
+          const maxGrowth = fishOverMax > 0
+            ? Math.max(0, FISH_MAX_GROWTH - fishOverMax * CAPACITY_PENALTY)
+            : FISH_MAX_GROWTH;
           const growthRate = fish.type.growthMultiplier;
           const prevFishGrowth = fish.growth;
-          fish.growth += fish.food * growthRate;
-          fish.growth = Math.min(FISH_MAX_GROWTH, fish.growth); // Cap growth at 10
+          if (prevFishGrowth < maxGrowth) {
+            fish.growth += fish.food * growthRate;
+            fish.growth = Math.min(maxGrowth, fish.growth);
+          }
 
           // Add a random amount of value for each growth level gained
           for (let i = 0; i < fish.growth - prevFishGrowth; i++) {
@@ -347,17 +375,19 @@ function draw() {
 updateCellInfo(grid[playerCoordinates.row][playerCoordinates.col]);
 draw();
 
-function dailyUpdate() {
+function nextDay() {
   regenerateFood();
   updateFishGrowth();
   updateFishReproduction();
   updateSunlight();
   updateCellInfo(grid[playerCoordinates.row][playerCoordinates.col]);
+  day++;
+  dayDisplay.innerHTML = `Day ${day}`;
 }
 
 document.addEventListener("keydown", (event) => {
   if (event.code === "Space") {
-    dailyUpdate();
+    nextDay();
   }
 });
 
@@ -415,11 +445,13 @@ canvas.addEventListener("click", (event) => {
 document.addEventListener("click", (event) => {
   const element = event.target as HTMLElement;
   console.log(element.tagName);
+  // If the player clicks something that isn't the canvas or shop buttons, remove popup
   if (
     element != canvas && element.tagName != "BUTTON" && element.tagName != "H5"
   ) {
     popup.style.display = "none";
   } else if (
+    // Update the popup if it describes current player cell
     clickedCell == grid[playerCoordinates.row][playerCoordinates.col]
   ) {
     fillPopup(clickedCell);
