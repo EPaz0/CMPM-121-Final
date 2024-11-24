@@ -9,7 +9,6 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   -webkit-text-size-adjust: 100%;
-  overflow: hidden;
   margin-left: 20px;
 }
 
@@ -22,10 +21,6 @@ canvas {
   margin-top: 20px;
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
 h5 {
   margin: 0%;
 }

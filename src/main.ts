@@ -16,13 +16,21 @@ document.body.append(popup);
 const headerDiv = document.querySelector<HTMLDivElement>("#header")!;
 const shopDiv = document.querySelector<HTMLDivElement>("#shop")!;
 
+// Modifiable gameplay values
+const STARTING_MONEY = 15;
+const BASE_FISH_COST = 15;
+const REPRODUCTION_CHANCE = 0.2;
+const FISH_MAX_FOOD = 3;
+const FISH_MAX_GROWTH = 10;
+const CELL_MAX_FOOD = 10;
+const CELL_MAX_SUNLIGHT = 10;
+
 createHeading({
   text: "Game Name TBD",
   div: headerDiv,
   size: "h1",
 });
 
-const STARTING_MONEY = 100;
 let money = STARTING_MONEY;
 
 const moneyDisplay = createHeading({
@@ -80,21 +88,21 @@ interface Fish {
 const fishTypes: FishType[] = [
   {
     typeName: "Green",
-    cost: 5,
+    cost: BASE_FISH_COST,
     growthMultiplier: 1,
     minValueGain: 1,
     maxValueGain: 3,
   },
   {
     typeName: "Yellow",
-    cost: 10,
+    cost: BASE_FISH_COST * 2,
     growthMultiplier: .75,
     minValueGain: 2,
     maxValueGain: 4,
   },
   {
     typeName: "Red",
-    cost: 20,
+    cost: BASE_FISH_COST * 3,
     growthMultiplier: .5,
     minValueGain: 3,
     maxValueGain: 5,
@@ -114,8 +122,8 @@ const grid: Cell[][] = Array.from(
     Array.from({ length: cols }, (_, colIndex) => ({
       x: colIndex * cellSize + gridOffset / 2,
       y: rowIndex * cellSize + gridOffset / 2,
-      sunlight: Math.floor(Math.random() * 10) + 1,
-      food: Math.floor(Math.random() * 10) + 1,
+      sunlight: Math.floor(Math.random() * CELL_MAX_SUNLIGHT) + 1,
+      food: Math.floor(Math.random() * CELL_MAX_FOOD) + 1,
       population: [],
     })),
 );
@@ -151,7 +159,7 @@ function drawPlayer(ctx: CanvasRenderingContext2D) {
 }
 
 function fishToString(fish: Fish) {
-  return `\n${fish.type.typeName} Fish | Growth: ${fish.growth}/10, Food: ${fish.food}/3, Value: ${fish.value}`;
+  return `\n${fish.type.typeName} Fish | Growth: ${fish.growth}/${FISH_MAX_GROWTH}, Food: ${fish.food}/${FISH_MAX_FOOD}, Value: ${fish.value}`;
 }
 
 function updateCellInfo(cell: Cell) {
@@ -175,15 +183,20 @@ function addFish(cell: Cell, type: FishType, num: number) {
     const fish = {
       type: type,
       growth: 0,
-      food: 3, // Start with full food
+      food: FISH_MAX_FOOD, // Start with full food
       value: Math.floor(type.cost / 2), // Value starts at half of what you bought it for
     };
     cell.population.push(fish);
   }
 }
 
-// Create shop buttons
+// Create shop
 fishTypes.forEach((fishType) => {
+  const costDisplay = createHeading({
+    text: `💵 ${fishType.cost}`,
+    div: shopDiv,
+    size: "h5",
+  });
   createButton({
     text: `Buy ${fishType.typeName} Fish`,
     div: shopDiv,
@@ -195,7 +208,7 @@ fishTypes.forEach((fishType) => {
         updateCellInfo(currentCell);
       }
     },
-  });
+  }).append(costDisplay);
 });
 
 function playerMovement(event: KeyboardEvent) {
@@ -238,7 +251,10 @@ function updateSunlight() {
   grid.forEach((row) => {
     row.forEach((cell) => {
       const change = Math.random() < 0.5 ? 0 : Math.random() < 0.5 ? -1 : 1; // Randomly decide to increase or decrease sunlight, or keep it the same
-      cell.sunlight = Math.max(1, Math.min(10, cell.sunlight + change)); // Ensure sunlight is between 1 and 10
+      cell.sunlight = Math.max(
+        1,
+        Math.min(CELL_MAX_SUNLIGHT, cell.sunlight + change),
+      ); // Ensure sunlight is between 1 and maximum
     });
   });
 }
@@ -246,7 +262,7 @@ function updateSunlight() {
 function regenerateFood() {
   grid.forEach((row) => {
     row.forEach((cell) => {
-      cell.food = Math.min(10, cell.food + cell.sunlight); // Food is proportional to sunlight
+      cell.food = Math.min(CELL_MAX_FOOD, cell.food + cell.sunlight); // Food is proportional to sunlight
     });
   });
 }
@@ -256,14 +272,14 @@ function updateFishGrowth() {
     row.forEach((cell) => {
       cell.population.forEach((fish) => {
         if (cell.food > 0) {
-          fish.food = Math.min(3, fish.food + 1); // Fish food level capped at 3
+          fish.food = Math.min(FISH_MAX_FOOD, fish.food + 1); // Fish food level capped at 3
           cell.food--;
 
           // Growth depends on fish type and food level
           const growthRate = fish.type.growthMultiplier;
           const prevFishGrowth = fish.growth;
           fish.growth += fish.food * growthRate;
-          fish.growth = Math.min(10, fish.growth); // Cap growth at 10
+          fish.growth = Math.min(FISH_MAX_GROWTH, fish.growth); // Cap growth at 10
 
           // Add a random amount of value for each growth level gained
           for (let i = 0; i < fish.growth - prevFishGrowth; i++) {
@@ -301,12 +317,19 @@ function updateFishReproduction() {
   grid.forEach((row) => {
     row.forEach((cell) => {
       if (cell.population.length >= 2 && cell.food > 0) {
-        const newGreen = Math.floor(getFishOfType(cell, "Green").length / 2);
-        const newYellow = Math.floor(getFishOfType(cell, "Yellow").length / 2);
-        const newRed = Math.floor(getFishOfType(cell, "Red").length / 2);
-        addFish(cell, fishTypes[0], newGreen); // Add one green fish per green fish pair
-        addFish(cell, fishTypes[1], newYellow); // Add one yellow fish per yellow fish pair
-        addFish(cell, fishTypes[3], newRed); // Add one red fish per red fish pair
+        const pairs = [];
+        // Number of pairs for each kind of fish
+        pairs.push(Math.floor(getFishOfType(cell, "Green").length / 2));
+        pairs.push(Math.floor(getFishOfType(cell, "Yellow").length / 2));
+        pairs.push(Math.floor(getFishOfType(cell, "Red").length / 2));
+        // Loop through number of pairs for each kind of fish to determine who reproduces
+        for (let i = 0; i < pairs.length; i++) {
+          for (let j = 0; j < pairs[i]; j++) {
+            if (Math.random() < REPRODUCTION_CHANCE) {
+              addFish(cell, fishTypes[i], 1); // 50% chance of adding one fish per pair
+            }
+          }
+        }
       }
     });
   });
@@ -345,19 +368,10 @@ function sellFish(cell: Cell, fish: Fish) {
   updateCellInfo(cell);
 }
 
-canvas.addEventListener("click", (event) => {
-  const rect = canvas.getBoundingClientRect();
-  const mouseX = event.clientX - rect.left;
-  const mouseY = event.clientY - rect.top;
-
-  const clickedCol = Math.floor(mouseX / cellSize);
-  const clickedRow = Math.floor(mouseY / cellSize);
-
-  const clickedCell = grid[clickedRow][clickedCol];
-
-  if (clickedCell.population.length > 0) {
-    popup.innerHTML = "";
-    clickedCell.population.forEach((fish) => {
+function fillPopup(cell: Cell) {
+  popup.innerHTML = "";
+  if (cell.population.length > 0) {
+    cell.population.forEach((fish) => {
       createHeading({
         text: fishToString(fish),
         div: popup,
@@ -367,7 +381,7 @@ canvas.addEventListener("click", (event) => {
         text: "Sell",
         div: popup,
         onClick: () => {
-          sellFish(clickedCell, fish);
+          sellFish(cell, fish);
         },
       });
     });
@@ -378,14 +392,36 @@ canvas.addEventListener("click", (event) => {
       size: "h5",
     });
   }
+}
 
-  popup.style.left = `${event.clientX + 10}px`;
-  popup.style.top = `${event.clientY + 10}px`;
+let clickedCell: Cell;
+canvas.addEventListener("click", (event) => {
+  const rect = canvas.getBoundingClientRect();
+  const mouseX = event.x - rect.left;
+  const mouseY = event.y - rect.top;
+
+  const clickedCol = Math.floor(mouseX / cellSize);
+  const clickedRow = Math.floor(mouseY / cellSize);
+
+  clickedCell = grid[clickedRow][clickedCol];
+
+  fillPopup(clickedCell);
+
+  popup.style.left = `${event.x + 10}px`;
+  popup.style.top = `${event.y + 10}px`;
   popup.style.display = "block";
 });
 
 document.addEventListener("click", (event) => {
-  if (event.target !== canvas) {
+  const element = event.target as HTMLElement;
+  console.log(element.tagName);
+  if (
+    element != canvas && element.tagName != "BUTTON" && element.tagName != "H5"
+  ) {
     popup.style.display = "none";
+  } else if (
+    clickedCell == grid[playerCoordinates.row][playerCoordinates.col]
+  ) {
+    fillPopup(clickedCell);
   }
 });
