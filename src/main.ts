@@ -99,7 +99,7 @@ const fishTypes: FishType[] = [
 const rows = 4;
 const cols = 5;
 const cellSize = 150; // Size of each grid cell
-const gridOffset = 20;
+const gridOffset = 10;
 canvas.width = cols * cellSize + gridOffset; // Set canvas width based on grid
 canvas.height = rows * cellSize + gridOffset; // Set canvas height based on grid
 
@@ -117,12 +117,13 @@ const grid: Cell[][] = Array.from(
 
 function drawCell(ctx: CanvasRenderingContext2D, cell: Cell) {
   if (ctx) {
-    ctx.lineWidth = 1;
-    ctx.strokeStyle = "black";
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = "lightblue";
     ctx.fillStyle = "lightcyan";
     ctx.strokeRect(cell.x, cell.y, cellSize, cellSize);
     ctx.fillRect(cell.x, cell.y, cellSize, cellSize);
     ctx.font = "20px arial";
+    ctx.lineWidth = 1;
     ctx.strokeStyle = "orange";
     ctx.strokeText(`☀️ ${cell.sunlight}`, cell.x + 10, cell.y + 30);
     ctx.strokeStyle = "red";
