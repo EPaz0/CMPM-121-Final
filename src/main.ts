@@ -207,7 +207,7 @@ document.addEventListener("keydown", playerMovement);
 function updateSunlight() {
   grid.forEach((row) => {
     row.forEach((cell) => {
-      const change = Math.random() < 0.5 ? -1 : 1; // Randomly decide to increase or decrease sunlight
+      const change = Math.random() < 0.5 ? 0 : Math.random() < 0.5 ? -1 : 1; // Randomly decide to increase or decrease sunlight, or keep it the same
       cell.sunlight = Math.max(1, Math.min(10, cell.sunlight + change)); // Ensure sunlight is between 1 and 10
     });
   });
@@ -216,7 +216,7 @@ function updateSunlight() {
 function regenerateFood() {
   grid.forEach((row) => {
     row.forEach((cell) => {
-      cell.food = Math.min(10, cell.food + Math.floor(cell.sunlight / 2)); // Food is proportional to sunlight
+      cell.food = Math.min(10, cell.food + cell.sunlight); // Food is proportional to sunlight
     });
   });
 }
