@@ -98,16 +98,17 @@ const fishTypes: FishType[] = [
 
 const rows = 4;
 const cols = 5;
-const gridSize = 150; // Size of each grid cell
-canvas.width = cols * gridSize; // Set canvas width based on grid
-canvas.height = rows * gridSize; // Set canvas height based on grid
+const cellSize = 150; // Size of each grid cell
+const gridOffset = 20;
+canvas.width = cols * cellSize + gridOffset; // Set canvas width based on grid
+canvas.height = rows * cellSize + gridOffset; // Set canvas height based on grid
 
 const grid: Cell[][] = Array.from(
   { length: rows },
   (_, rowIndex) =>
     Array.from({ length: cols }, (_, colIndex) => ({
-      x: colIndex * gridSize,
-      y: rowIndex * gridSize,
+      x: colIndex * cellSize + gridOffset / 2,
+      y: rowIndex * cellSize + gridOffset / 2,
       sunlight: Math.floor(Math.random() * 10) + 1,
       food: Math.floor(Math.random() * 10) + 1,
       population: [],
@@ -116,11 +117,18 @@ const grid: Cell[][] = Array.from(
 
 function drawCell(ctx: CanvasRenderingContext2D, cell: Cell) {
   if (ctx) {
-    ctx.fillStyle = "Green";
-    ctx.strokeRect(cell.x, cell.y, gridSize, gridSize);
-    ctx.strokeText(`☀${cell.sunlight}`, cell.x + 5, cell.y + 15);
-    ctx.strokeText(`🍎${cell.food}`, cell.x + 5, cell.y + 30);
-    ctx.strokeText(`🐟${cell.population.length}`, cell.x + 5, cell.y + 45);
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = "black";
+    ctx.fillStyle = "lightcyan";
+    ctx.strokeRect(cell.x, cell.y, cellSize, cellSize);
+    ctx.fillRect(cell.x, cell.y, cellSize, cellSize);
+    ctx.font = "20px arial";
+    ctx.strokeStyle = "orange";
+    ctx.strokeText(`☀️ ${cell.sunlight}`, cell.x + 10, cell.y + 30);
+    ctx.strokeStyle = "red";
+    ctx.strokeText(`🍎 ${cell.food}`, cell.x + 10, cell.y + 50);
+    ctx.strokeStyle = "blue";
+    ctx.strokeText(`🐟 ${cell.population.length}`, cell.x + 10, cell.y + 70);
   }
 }
 
@@ -129,10 +137,11 @@ function drawGrid(ctx: CanvasRenderingContext2D) {
 }
 
 function drawPlayer(ctx: CanvasRenderingContext2D) {
-  ctx.fillStyle = "Red";
-  const cellX = playerCoordinates.col * gridSize + 50;
-  const cellY = playerCoordinates.row * gridSize;
-  ctx.fillRect(cellX, cellY, 50, 50);
+  const cellX = playerCoordinates.col * cellSize + gridOffset / 2;
+  const cellY = playerCoordinates.row * cellSize + gridOffset / 2;
+  ctx.strokeStyle = "limegreen";
+  ctx.lineWidth = 8;
+  ctx.strokeRect(cellX, cellY, cellSize, cellSize);
 }
 
 function updateCellInfo(cell: Cell) {
@@ -140,9 +149,9 @@ function updateCellInfo(cell: Cell) {
   if (cellInfoDiv) {
     cellInfoDiv.innerText =
       `Cell (${playerCoordinates.row}, ${playerCoordinates.col})
-    ☀Sunlight: ${cell.sunlight}
-    🍎Food: ${cell.food}
-    🐟Fish: ${cell.population.length}`;
+    ☀️ Sunlight: ${cell.sunlight}
+    🍎 Food: ${cell.food}
+    🐟 Fish: ${cell.population.length}`;
     if (cell.population.length > 0) {
       cell.population.forEach((fish) => {
         cellInfoDiv.innerText +=
@@ -286,22 +295,6 @@ function updateFishReproduction() {
   });
 }
 
-// Initialize starting fish at random
-// grid.forEach((row) => {
-//   row.forEach((cell) => {
-//     if (Math.random() > 0.5) { // 50% chance to add a fish
-//       addFish(cell, "Green", 2);
-//     }
-//     if (Math.random() > 0.65) { // 25% chance to add a fish
-//       addFish(cell, "Yellow", 1);
-//     }
-
-//     if (Math.random() > 0.98) { // 2% chance to add a fish
-//       addFish(cell, "Red", 1);
-//     }
-//   });
-// });
-
 function update() {
   if (ctx) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -334,8 +327,8 @@ canvas.addEventListener("click", (event) => {
   const mouseX = event.clientX - rect.left;
   const mouseY = event.clientY - rect.top;
 
-  const clickedCol = Math.floor(mouseX / gridSize);
-  const clickedRow = Math.floor(mouseY / gridSize);
+  const clickedCol = Math.floor(mouseX / cellSize);
+  const clickedRow = Math.floor(mouseY / cellSize);
 
   const clickedCell = grid[clickedRow][clickedCol];
 
