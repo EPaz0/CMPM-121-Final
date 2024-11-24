@@ -76,13 +76,15 @@ const moneyDisplay = createHeading({
 });
 moneyDisplay.style.display = "inline";
 
+let objectiveReached = false;
 function changeMoney(change: number) {
   money += change;
   moneyDisplay.innerHTML = `💵 ${money}`;
   // Check if objective reached
-  if (money >= OBJECTIVE_MONEY) {
+  if (money >= OBJECTIVE_MONEY && !objectiveReached) {
+    objectiveReached = true;
     objectiveDisplay.innerHTML =
-      `<strike>Make 💵 ${OBJECTIVE_MONEY}</strike> You win!`;
+      `<strike>Make 💵 ${OBJECTIVE_MONEY}</strike> You won in ${day} days!`;
   }
 }
 
