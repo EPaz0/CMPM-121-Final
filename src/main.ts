@@ -228,6 +228,11 @@ fishTypes.forEach((fishType) => {
   }).append(costDisplay);
 });
 
+function movePlayer(newRow: number, newCol: number) {
+  playerCoordinates.row = newRow;
+  playerCoordinates.col = newCol;
+}
+
 function playerMovement(event: KeyboardEvent) {
   let newRow = playerCoordinates.row;
   let newCol = playerCoordinates.col;
@@ -256,12 +261,12 @@ function playerMovement(event: KeyboardEvent) {
   }
 
   if (newRow >= 0 && newRow < rows && newCol >= 0 && newCol < cols) {
-    playerCoordinates.row = newRow;
-    playerCoordinates.col = newCol;
+    movePlayer(newRow, newCol);
   }
-  const currentCell = grid[newRow][newCol];
-  updateCellInfo(currentCell);
-  popup.style.display = "none"; // Remove popup when player moves
+
+  const newCell = grid[newRow][newCol];
+  updateCellInfo(newCell);
+  popup.style.display = "none"; // Remove popup when player moves using keyboard
 }
 document.addEventListener("keydown", playerMovement);
 
@@ -434,6 +439,8 @@ canvas.addEventListener("click", (event) => {
   const clickedRow = Math.floor(mouseY / cellSize);
 
   clickedCell = grid[clickedRow][clickedCol];
+  movePlayer(clickedRow, clickedCol);
+  updateCellInfo(clickedCell);
 
   fillPopup(clickedCell);
 
@@ -450,10 +457,7 @@ document.addEventListener("click", (event) => {
     element != canvas && element.tagName != "BUTTON" && element.tagName != "H5"
   ) {
     popup.style.display = "none";
-  } else if (
-    // Update the popup if it describes current player cell
-    clickedCell == grid[playerCoordinates.row][playerCoordinates.col]
-  ) {
+  } else { // Otherwise, update the popup to reflect current state
     fillPopup(clickedCell);
   }
 });
