@@ -18,7 +18,8 @@ const shopDiv = document.querySelector<HTMLDivElement>("#shop")!;
 const objectivesDiv = document.querySelector<HTMLDivElement>("#objectives")!;
 
 // Modifiable gameplay values
-const STARTING_MONEY = 15;
+const STARTING_MONEY = 30;
+const OBJECTIVE_MONEY = 500;
 const BASE_FISH_COST = 15;
 const REPRODUCTION_CHANCE = 0.2;
 const SUNLIGHT_CHANGE_CHANCE = 0.4;
@@ -42,7 +43,12 @@ createHeading({
   size: "h2",
 });
 
-createHeading({ text: "Objectives", div: objectivesDiv, size: "h2" });
+createHeading({ text: "Objective", div: objectivesDiv, size: "h2" });
+const objectiveDisplay = createHeading({
+  text: `Make 💵 ${OBJECTIVE_MONEY}`,
+  div: objectivesDiv,
+  size: "h4",
+});
 
 let day = 0;
 const dayDisplay = createHeading({
@@ -73,6 +79,11 @@ moneyDisplay.style.display = "inline";
 function changeMoney(change: number) {
   money += change;
   moneyDisplay.innerHTML = `💵 ${money}`;
+  // Check if objective reached
+  if (money >= OBJECTIVE_MONEY) {
+    objectiveDisplay.innerHTML =
+      `<strike>Make 💵 ${OBJECTIVE_MONEY}</strike> You win!`;
+  }
 }
 
 const playerCoordinates = { col: 0, row: 0 };
