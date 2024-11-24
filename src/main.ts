@@ -70,6 +70,7 @@ interface Fish {
   type: FishType;
   growth: number; // 0-10
   food: number; // 0-3
+  value: number;
 }
 
 const fishTypes: FishType[] = [
@@ -145,6 +146,10 @@ function drawPlayer(ctx: CanvasRenderingContext2D) {
   ctx.strokeRect(cellX, cellY, cellSize, cellSize);
 }
 
+function fishToString(fish: Fish) {
+  return `\n${fish.type.typeName} Fish | Growth: ${fish.growth}/10, Food: ${fish.food}/3, Value: ${fish.value}`;
+}
+
 function updateCellInfo(cell: Cell) {
   const cellInfoDiv = document.getElementById("cell-info");
   if (cellInfoDiv) {
@@ -155,8 +160,7 @@ function updateCellInfo(cell: Cell) {
     🐟 Fish: ${cell.population.length}`;
     if (cell.population.length > 0) {
       cell.population.forEach((fish) => {
-        cellInfoDiv.innerText +=
-          `\n${fish.type.typeName} Fish | Growth: ${fish.growth}/10, Food: ${fish.food}/3`;
+        cellInfoDiv.innerText += fishToString(fish);
       });
     }
   }
@@ -237,6 +241,7 @@ function addFish(cell: Cell, type: FishType, num: number) {
       type: type,
       growth: 0,
       food: 3, // Start with full food
+      value: type.cost, // Value starts at what you bought it for
     };
     cell.population.push(fish);
   }
@@ -252,11 +257,18 @@ function updateFishGrowth() {
 
           // Growth depends on fish type and food level
           const growthRate = fish.type.growthMultiplier;
-          if (fish.food === 3) fish.growth += 3 * growthRate;
-          else if (fish.food === 2) fish.growth += 2 * growthRate;
-          else if (fish.food === 1) fish.growth += 1 * growthRate;
-
+          const prevFishGrowth = fish.growth;
+          fish.growth += fish.food * growthRate;
           fish.growth = Math.min(10, fish.growth); // Cap growth at 10
+
+          // Add a random amount of value for each growth level gained
+          for (let i = 0; i < fish.growth - prevFishGrowth; i++) {
+            fish.value += Math.floor(
+              Math.random() *
+                  (fish.type.maxValueGain - fish.type.minValueGain + 1) +
+                fish.type.minValueGain,
+            );
+          }
         } else {
           // If no food, fish dies
           fish.food -= 1;
@@ -334,9 +346,8 @@ canvas.addEventListener("click", (event) => {
   const clickedCell = grid[clickedRow][clickedCol];
 
   if (clickedCell.population.length > 0) {
-    const fishDetails = clickedCell.population.map((fish) =>
-      `${fish.type.typeName} Fish | Growth: ${fish.growth}/10, Food: ${fish.food}/3`
-    ).join("<br>");
+    const fishDetails = clickedCell.population.map((fish) => fishToString(fish))
+      .join("<br>");
 
     popup.innerHTML =
       `<strong>Cell (${clickedRow}, ${clickedCol})</strong><br>${fishDetails}`;
