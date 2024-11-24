@@ -1,3 +1,5 @@
+import "./style.css";
+
 // Import useful functions
 import { createButton, createHeading } from "./utils.ts";
 
@@ -9,7 +11,7 @@ popup.style.backgroundColor = "white";
 popup.style.border = "1px solid black";
 popup.style.padding = "10px";
 popup.style.display = "none";
-document.body.appendChild(popup);
+document.body.append(popup);
 
 const headerDiv = document.querySelector<HTMLDivElement>("#header")!;
 const shopDiv = document.querySelector<HTMLDivElement>("#shop")!;
@@ -22,11 +24,13 @@ createHeading({
 
 const STARTING_MONEY = 100;
 let money = STARTING_MONEY;
+
 const moneyDisplay = createHeading({
-  text: `💵: ${money}`,
+  text: `💵 ${money}`,
   div: headerDiv,
   size: "h2",
 });
+
 function changeMoney(change: number) {
   money += change;
   moneyDisplay.innerHTML = `💵: ${money}`;
@@ -166,6 +170,18 @@ function updateCellInfo(cell: Cell) {
   }
 }
 
+function addFish(cell: Cell, type: FishType, num: number) {
+  for (let i = 0; i < num; i++) {
+    const fish = {
+      type: type,
+      growth: 0,
+      food: 3, // Start with full food
+      value: Math.floor(type.cost / 2), // Value starts at half of what you bought it for
+    };
+    cell.population.push(fish);
+  }
+}
+
 // Create shop buttons
 fishTypes.forEach((fishType) => {
   createButton({
@@ -235,18 +251,6 @@ function regenerateFood() {
   });
 }
 
-function addFish(cell: Cell, type: FishType, num: number) {
-  for (let i = 0; i < num; i++) {
-    const fish = {
-      type: type,
-      growth: 0,
-      food: 3, // Start with full food
-      value: type.cost, // Value starts at what you bought it for
-    };
-    cell.population.push(fish);
-  }
-}
-
 function updateFishGrowth() {
   grid.forEach((row) => {
     row.forEach((cell) => {
@@ -308,18 +312,17 @@ function updateFishReproduction() {
   });
 }
 
-function update() {
+function draw() {
   if (ctx) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     drawGrid(ctx);
     drawPlayer(ctx);
-
-    requestAnimationFrame(update);
+    requestAnimationFrame(draw);
   }
 }
 
 updateCellInfo(grid[playerCoordinates.row][playerCoordinates.col]);
-update();
+draw();
 
 function dailyUpdate() {
   regenerateFood();
@@ -335,6 +338,13 @@ document.addEventListener("keydown", (event) => {
   }
 });
 
+function sellFish(cell: Cell, fish: Fish) {
+  changeMoney(fish.value);
+  const fishIndex = cell.population.indexOf(fish);
+  cell.population.splice(fishIndex, 1);
+  updateCellInfo(cell);
+}
+
 canvas.addEventListener("click", (event) => {
   const rect = canvas.getBoundingClientRect();
   const mouseX = event.clientX - rect.left;
@@ -346,14 +356,27 @@ canvas.addEventListener("click", (event) => {
   const clickedCell = grid[clickedRow][clickedCol];
 
   if (clickedCell.population.length > 0) {
-    const fishDetails = clickedCell.population.map((fish) => fishToString(fish))
-      .join("<br>");
-
-    popup.innerHTML =
-      `<strong>Cell (${clickedRow}, ${clickedCol})</strong><br>${fishDetails}`;
+    popup.innerHTML = "";
+    clickedCell.population.forEach((fish) => {
+      createHeading({
+        text: fishToString(fish),
+        div: popup,
+        size: "h5",
+      });
+      createButton({
+        text: "Sell",
+        div: popup,
+        onClick: () => {
+          sellFish(clickedCell, fish);
+        },
+      });
+    });
   } else {
-    popup.innerHTML =
-      `<strong>Cell (${clickedRow}, ${clickedCol})</strong><br>No fish in this cell.`;
+    createHeading({
+      text: "No fish in this cell.",
+      div: popup,
+      size: "h5",
+    });
   }
 
   popup.style.left = `${event.clientX + 10}px`;
