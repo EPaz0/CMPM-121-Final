@@ -146,6 +146,69 @@ const gridOffset = 10;
 canvas.width = cols * cellSize + gridOffset; // Set canvas width based on grid
 canvas.height = rows * cellSize + gridOffset; // Set canvas height based on grid
 
+const bytesPerCell = 3 + CELL_FISH_CAPACITY * 4; // 3 for cell data, 4 per fish
+const gridStateBuffer = new ArrayBuffer(rows * cols * bytesPerCell);
+const gridStateView = new Uint8Array(gridStateBuffer);
+
+// Encodes grid state into the byte array
+function encodeGridState() {
+  let index = 0;
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      const cell = grid[row][col];
+      gridStateView[index++] = cell.sunlight;
+      gridStateView[index++] = cell.food;
+      gridStateView[index++] = cell.population.length;
+
+      // Encode fish data
+      for (let i = 0; i < CELL_FISH_CAPACITY; i++) {
+        if (i < cell.population.length) {
+          const fish = cell.population[i];
+          gridStateView[index++] = fish.type.typeName === "Green" ? 0 : fish.type.typeName === "Yellow" ? 1 : 2;
+          gridStateView[index++] = fish.growth;
+          gridStateView[index++] = fish.food;
+          gridStateView[index++] = fish.value;
+        } else {
+          // Fill unused fish slots with zeros
+          gridStateView[index++] = 0; // Type
+          gridStateView[index++] = 0; // Growth
+          gridStateView[index++] = 0; // Food
+          gridStateView[index++] = 0; // Value
+        }
+      }
+    }
+  }
+}
+
+// Decodes the byte array back into the grid
+function decodeGridState() {
+  let index = 0;
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      const cell = grid[row][col];
+      cell.sunlight = gridStateView[index++];
+      cell.food = gridStateView[index++];
+      const populationCount = gridStateView[index++];
+
+      // Clear current fish population
+      cell.population = [];
+
+      // Decode fish data
+      for (let i = 0; i < populationCount; i++) {
+        const typeIndex = gridStateView[index++];
+        const type = fishTypes[typeIndex];
+        const growth = gridStateView[index++];
+        const food = gridStateView[index++];
+        const value = gridStateView[index++];
+        cell.population.push({ type, growth, food, value });
+      }
+
+      // Skip unused fish slots
+      index += (CELL_FISH_CAPACITY - populationCount) * 4;
+    }
+  }
+}
+
 const grid: Cell[][] = Array.from(
   { length: rows },
   (_, rowIndex) =>
@@ -296,6 +359,7 @@ function updateSunlight() {
       );
     });
   });
+  encodeGridState();
 }
 
 function regenerateFood() {
@@ -346,7 +410,11 @@ function updateFishGrowth() {
       });
     });
   });
+  encodeGridState();
 }
+
+// Ensure initial encoding
+encodeGridState();
 
 // Returns an array of a certain type of fish in a given cell
 function getFishOfType(cell: Cell, typeName: FishTypeName) {
@@ -474,3 +542,95 @@ document.addEventListener("click", (event) => {
     fillPopup(clickedCell);
   }
 });
+
+
+// Create a button container and style it
+const buttonContainer = document.createElement("div");
+buttonContainer.style.position = "absolute";
+buttonContainer.style.top = "10px"; // Adjust distance from the top
+buttonContainer.style.right = "10px"; // Adjust distance from the right
+buttonContainer.style.display = "flex";
+buttonContainer.style.flexDirection = "row"; // Keep buttons horizontal
+buttonContainer.style.gap = "10px"; // Add spacing between buttons
+document.body.appendChild(buttonContainer);
+
+createButton({
+  text: "Save Game",
+  div: buttonContainer, // Append to the button container
+  onClick: () => {
+    const slot = prompt("Enter save slot name (e.g., Slot1):");
+    if (slot) saveGame(slot);
+  },
+});
+
+createButton({
+  text: "Load Game",
+  div: buttonContainer, // Append to the button container
+  onClick: () => {
+    const slot = prompt("Enter save slot name to load (e.g., Slot1):");
+    if (slot) loadGame(slot);
+  },
+});
+
+createButton({
+  text: "List Save Slots",
+  div: buttonContainer, // Append to the button container
+  onClick: listSaveSlots,
+});
+
+createButton({
+  text: "Delete Save Slot",
+  div: buttonContainer, // Append to the button container
+  onClick: deleteSaveSlot,
+});
+
+
+function saveGame(slot: string) {
+  const saveData = {
+    day,
+    money,
+    playerCoordinates,
+    gridState: Array.from(gridStateView), // Convert byte array to a regular array
+  };
+
+  localStorage.setItem(`FishFarm_${slot}`, JSON.stringify(saveData));
+  alert(`Game saved to slot "${slot}".`);
+}
+
+function loadGame(slot: string) {
+  const savedData = localStorage.getItem(`FishFarm_${slot}`);
+  if (!savedData) {
+    alert(`No save data found for slot "${slot}".`);
+    return;
+  }
+
+  const saveData = JSON.parse(savedData);
+
+  // Restore game state
+  day = saveData.day;
+  money = saveData.money;
+  playerCoordinates.col = saveData.playerCoordinates.col;
+  playerCoordinates.row = saveData.playerCoordinates.row;
+  gridStateView.set(saveData.gridState); // Restore the byte array
+  decodeGridState(); // Rebuild the grid
+
+  // Update UI
+  dayDisplay.innerHTML = `Day ${day}`;
+  moneyDisplay.innerHTML = `💵 ${money}`;
+  updateCellInfo(grid[playerCoordinates.row][playerCoordinates.col]);
+
+  alert(`Game loaded from slot "${slot}".`);
+}
+
+function listSaveSlots() {
+  const slots = Object.keys(localStorage).filter((key) => key.startsWith("FishFarm_"));
+  alert(`Available save slots:\n${slots.map((slot) => slot.replace("FishFarm_", "")).join(", ")}`);
+}
+
+function deleteSaveSlot() {
+  const slot = prompt("Enter save slot to delete (e.g., Slot1):");
+  if (!slot) return;
+
+  localStorage.removeItem(`FishFarm_${slot}`);
+  alert(`Save slot "${slot}" deleted.`);
+}
