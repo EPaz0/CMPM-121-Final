@@ -86,6 +86,7 @@ function changeMoney(change: number) {
     objectiveDisplay.innerHTML =
       `<strike>Make 💵 ${OBJECTIVE_MONEY}</strike> You won in ${day} days!`;
   }
+  saveGame("AutoSave"); // Autosave when money changes
 }
 
 const playerCoordinates = { col: 0, row: 0 };
@@ -269,6 +270,7 @@ function updateCellInfo(cell: Cell) {
       });
     }
   }
+  saveGame("AutoSave"); // Autosave when cell info changes
 }
 
 function addFish(cell: Cell, type: FishType, num: number) {
@@ -307,6 +309,7 @@ fishTypes.forEach((fishType) => {
 function movePlayer(newRow: number, newCol: number) {
   playerCoordinates.row = newRow;
   playerCoordinates.col = newCol;
+  saveGame("AutoSave"); // Autosave when player moves
 }
 
 function playerMovement(event: KeyboardEvent) {
@@ -458,6 +461,18 @@ function draw() {
   }
 }
 
+if (localStorage.getItem("FishFarm_AutoSave")) {
+  if (confirm("Do you want to load the autosave?")) {
+    loadGame("AutoSave"); // Load the autosave
+  } else {
+    // Optional: Allow user to start fresh but keep the existing AutoSave
+    alert("Starting a new game. Autosave will overwrite your previous autosave.");
+  }
+} else {
+  alert("No autosave found. Starting a new game.");
+  saveGame("AutoSave"); // Create the first autosave
+}
+
 updateCellInfo(grid[playerCoordinates.row][playerCoordinates.col]);
 draw();
 
@@ -469,6 +484,7 @@ function nextDay() {
   updateCellInfo(grid[playerCoordinates.row][playerCoordinates.col]);
   day++;
   dayDisplay.innerHTML = `Day ${day}`;
+  saveGame("AutoSave"); // Autosave at the end of each day
 }
 
 document.addEventListener("keydown", (event) => {
@@ -594,6 +610,7 @@ function saveGame(slot: string) {
   };
 
   localStorage.setItem(`FishFarm_${slot}`, JSON.stringify(saveData));
+  if(slot === "AutoSave") return; 
   alert(`Game saved to slot "${slot}".`);
 }
 
@@ -634,3 +651,8 @@ function deleteSaveSlot() {
   localStorage.removeItem(`FishFarm_${slot}`);
   alert(`Save slot "${slot}" deleted.`);
 }
+
+
+
+
+
