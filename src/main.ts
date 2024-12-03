@@ -1,4 +1,5 @@
 import "./style.css";
+import luck from "./luck.ts";
 
 // Import useful functions
 import { createButton, createHeading } from "./utils.ts";
@@ -33,10 +34,17 @@ const CELL_MAX_SUNLIGHT = 10;
 
 // Game state variables
 const playerCoordinates = { col: 0, row: 0 };
+let seed = 0; // For deterministic random generation, (0-10000)
 let day = 0;
 let money = STARTING_MONEY;
 
+function generateSeed() {
+  seed = Math.floor(Math.random() * 10001);
+}
+generateSeed();
+
 interface GameState {
+  seed: number;
   day: number;
   money: number;
   gridState: number[];
@@ -228,8 +236,12 @@ const grid: Cell[][] = Array.from(
     Array.from({ length: cols }, (_, colIndex) => ({
       x: colIndex * cellSize + gridOffset / 2,
       y: rowIndex * cellSize + gridOffset / 2,
-      sunlight: Math.floor(Math.random() * CELL_MAX_SUNLIGHT) + 1,
-      food: Math.floor(Math.random() * CELL_MAX_FOOD) + 1,
+      sunlight: Math.floor(
+        luck([rowIndex, colIndex, seed, "sun"].toString()) * CELL_MAX_SUNLIGHT,
+      ) + 1,
+      food: Math.floor(
+        luck([rowIndex, colIndex, seed, "food"].toString()) * CELL_MAX_FOOD,
+      ) + 1,
       population: [],
     })),
 );
@@ -364,8 +376,15 @@ function updateSunlight() {
   grid.forEach((row) => {
     row.forEach((cell) => {
       // Randomly decide to increase or decrease sunlight, or keep it the same
-      const randChange = Math.random() < 0.5 ? -1 : 1;
-      const change = Math.random() < SUNLIGHT_CHANGE_CHANCE ? 0 : randChange;
+      const randChange =
+        luck([cell.x, cell.y, day, seed, "randchange"].toString()) < 0.5
+          ? -1
+          : 1;
+      const change =
+        luck([cell.x, cell.y, day, seed, "realchange"].toString()) <
+            SUNLIGHT_CHANGE_CHANCE
+          ? 0
+          : randChange;
       // Ensure sunlight is between 1 and maximum
       cell.sunlight = Math.max(
         1,
@@ -411,7 +430,10 @@ function updateFishGrowth() {
           // Add a random amount of value for each growth level gained
           for (let i = 0; i < fish.growth - prevFishGrowth; i++) {
             fish.value += Math.floor(
-              Math.random() *
+              luck(
+                    [cell.food, cell.population.length, day, i, seed, "value"]
+                      .toString(),
+                  ) *
                   (fish.type.maxValueGain - fish.type.minValueGain + 1) +
                 fish.type.minValueGain,
             );
@@ -456,7 +478,10 @@ function updateFishReproduction() {
         for (let i = 0; i < pairs.length; i++) {
           for (let j = 0; j < pairs[i]; j++) {
             if (
-              Math.random() < REPRODUCTION_CHANCE &&
+              luck(
+                  [cell.x, cell.y, i, j, day, seed, "reproduction"].toString(),
+                ) <
+                REPRODUCTION_CHANCE &&
               cell.population.length < CELL_MAX_CAPACITY
             ) {
               addFish(cell, fishTypes[i], 1); // 50% chance of adding one fish per pair
@@ -488,6 +513,7 @@ if (localStorage.getItem("FishFarm_AutoSave")) {
   }
 } else {
   alert("No autosave found. Starting a new game.");
+  generateSeed();
   autoSave(); // Create the first autosave
 }
 
@@ -646,6 +672,7 @@ createButton({
 function getGameState(): GameState {
   encodeGridState(); // Encode the current grid state before returning a representation of the game state
   return {
+    seed: seed,
     day: day,
     money: money,
     gridState: Array.from(gridStateView), // Convert byte array to a regular array
@@ -697,6 +724,7 @@ function loadGame(slot: string) {
 
   const savedStates = JSON.parse(savedData);
   gameStates = savedStates.map((state: GameState) => ({
+    seed: state.seed,
     day: state.day,
     money: state.money,
     gridState: state.gridState,

@@ -1,8 +1,15 @@
 {
-  "hash": "40ab84fa",
-  "configHash": "4a6b8d26",
+  "hash": "393bede5",
+  "configHash": "386b4ae4",
   "lockfileHash": "e3b0c442",
-  "browserHash": "b0e1dde6",
-  "optimized": {},
+  "browserHash": "c88b37bc",
+  "optimized": {
+    "murmur-32": {
+      "src": "../../node_modules/.deno/murmur-32@1.0.0/node_modules/murmur-32/index.js",
+      "file": "murmur-32.js",
+      "fileHash": "296ebfa7",
+      "needsInterop": false
+    }
+  },
   "chunks": {}
 }

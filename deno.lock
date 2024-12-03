@@ -1,6 +1,7 @@
 {
   "version": "4",
   "specifiers": {
+    "npm:murmur-32@1": "1.0.0",
     "npm:vite@*": "5.4.8"
   },
   "npm": {
@@ -124,6 +125,9 @@
     "@types/estree@1.0.6": {
       "integrity": "sha512-AYnb1nQyY49te+VRAVgmzfcgjYS91mY5P0TKUDCLEM+gNnA+3T6rWITXRLYCpahpqSQbN5cE+gHpnPyXjHWxcw=="
     },
+    "encode-utf8@2.0.0": {
+      "integrity": "sha512-3EyMFxZj1/7oMotElDQUEQcP7N4TIe1aJ0m1uBDoyQ8I2LBHhBsXx8P3KsPbqNlGzG+NYxFwEauUwMPHZg3YDQ=="
+    },
     "esbuild@0.21.5": {
       "integrity": "sha512-mg3OPMV4hXywwpoDxu3Qda5xCKQi+vCTZq8S9J/EpkhB2HzKXq4SNFZE3+NK93JYxc8VMSep+lOUSC/RVKaBqw==",
       "dependencies": [
@@ -152,8 +156,18 @@
         "@esbuild/win32-x64"
       ]
     },
+    "fmix@1.0.0": {
+      "integrity": "sha512-PIaqOGvVH5P+R92Ywy5PumsNEHvondVQh42SGOmkA9A0ZTFbfguzZpjZ/Gy3WVRUqT9Ia8k5tWlJeiZQzRHA7g=="
+    },
     "fsevents@2.3.3": {
       "integrity": "sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw=="
+    },
+    "murmur-32@1.0.0": {
+      "integrity": "sha512-l6QKUGWXzZWHash7lmZzycpIifOrnc3PeMaoFrMv90c+xqOyOSzJU0q2T/1d15MzAdEWTpCh1paC855APqt1Gw==",
+      "dependencies": [
+        "encode-utf8",
+        "fmix"
+      ]
     },
     "nanoid@3.3.7": {
       "integrity": "sha512-eSRppjcPIatRIMC1U6UngP8XFcz8MQWGQdt1MTBQ7NaAmvXDfvNxbvWV3x2y6CdEUciCSsDHDQZbhYaB8QEo2g=="
@@ -204,5 +218,10 @@
         "rollup"
       ]
     }
+  },
+  "workspace": {
+    "dependencies": [
+      "npm:murmur-32@1"
+    ]
   }
 }

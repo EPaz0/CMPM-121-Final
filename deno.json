@@ -8,5 +8,8 @@
   },
   "compilerOptions": {
     "lib": ["es2015", "dom"]
+  },
+  "imports": {
+    "murmur-32": "npm:murmur-32@^1.0.0"
   }
 }
