@@ -25,7 +25,8 @@ const REPRODUCTION_CHANCE = 0.2;
 const SUNLIGHT_CHANGE_CHANCE = 0.4;
 const FISH_MAX_FOOD = 3;
 const FISH_MAX_GROWTH = 10;
-const CELL_FISH_CAPACITY = 5; // The threshold at which fish can no longer reach max size
+const CELL_MAX_CAPACITY = 10; // The maximum amount of fish a cell can hold
+const CELL_CAPACITY_THRESHOLD = 5; // The threshold at which fish can no longer reach max size
 const CAPACITY_PENALTY = 2; // The amount by which max growth decreases for each fish above capacity
 const CELL_MAX_FOOD = 10;
 const CELL_MAX_SUNLIGHT = 10;
@@ -147,7 +148,7 @@ const gridOffset = 10;
 canvas.width = cols * cellSize + gridOffset; // Set canvas width based on grid
 canvas.height = rows * cellSize + gridOffset; // Set canvas height based on grid
 
-const bytesPerCell = 3 + CELL_FISH_CAPACITY * 4; // 3 for cell data, 4 per fish
+const bytesPerCell = 3 + CELL_MAX_CAPACITY * 4; // 3 for cell data, 4 per fish
 const gridStateBuffer = new ArrayBuffer(rows * cols * bytesPerCell);
 const gridStateView = new Uint8Array(gridStateBuffer);
 
@@ -162,10 +163,14 @@ function encodeGridState() {
       gridStateView[index++] = cell.population.length;
 
       // Encode fish data
-      for (let i = 0; i < CELL_FISH_CAPACITY; i++) {
+      for (let i = 0; i < CELL_MAX_CAPACITY; i++) {
         if (i < cell.population.length) {
           const fish = cell.population[i];
-          gridStateView[index++] = fish.type.typeName === "Green" ? 0 : fish.type.typeName === "Yellow" ? 1 : 2;
+          gridStateView[index++] = fish.type.typeName === "Green"
+            ? 0
+            : fish.type.typeName === "Yellow"
+            ? 1
+            : 2;
           gridStateView[index++] = fish.growth;
           gridStateView[index++] = fish.food;
           gridStateView[index++] = fish.value;
@@ -205,7 +210,7 @@ function decodeGridState() {
       }
 
       // Skip unused fish slots
-      index += (CELL_FISH_CAPACITY - populationCount) * 4;
+      index += (CELL_MAX_CAPACITY - populationCount) * 4;
     }
   }
 }
@@ -270,7 +275,6 @@ function updateCellInfo(cell: Cell) {
       });
     }
   }
-  saveGame("AutoSave"); // Autosave when cell info changes
 }
 
 function addFish(cell: Cell, type: FishType, num: number) {
@@ -283,6 +287,7 @@ function addFish(cell: Cell, type: FishType, num: number) {
     };
     cell.population.push(fish);
   }
+  saveGame("AutoSave"); // Auto save when player buys a fish
 }
 
 // Create shop
@@ -362,7 +367,6 @@ function updateSunlight() {
       );
     });
   });
-  encodeGridState();
 }
 
 function regenerateFood() {
@@ -382,7 +386,7 @@ function updateFishGrowth() {
           cell.food--;
 
           // Growth depends on fish type, food level, and amount of fish in cell
-          const fishOverMax = cell.population.length - CELL_FISH_CAPACITY;
+          const fishOverMax = cell.population.length - CELL_CAPACITY_THRESHOLD;
           // Max growth goes down for every fish over the maximum cell capacity
           const maxGrowth = fishOverMax > 0
             ? Math.max(0, FISH_MAX_GROWTH - fishOverMax * CAPACITY_PENALTY)
@@ -413,7 +417,6 @@ function updateFishGrowth() {
       });
     });
   });
-  encodeGridState();
 }
 
 // Ensure initial encoding
@@ -466,7 +469,9 @@ if (localStorage.getItem("FishFarm_AutoSave")) {
     loadGame("AutoSave"); // Load the autosave
   } else {
     // Optional: Allow user to start fresh but keep the existing AutoSave
-    alert("Starting a new game. Autosave will overwrite your previous autosave.");
+    alert(
+      "Starting a new game. Autosave will overwrite your previous autosave.",
+    );
   }
 } else {
   alert("No autosave found. Starting a new game.");
@@ -498,6 +503,7 @@ function sellFish(cell: Cell, fish: Fish) {
   const fishIndex = cell.population.indexOf(fish);
   cell.population.splice(fishIndex, 1);
   updateCellInfo(cell);
+  saveGame("AutoSave"); // Auto save when player sells a fish
 }
 
 function fillPopup(cell: Cell) {
@@ -559,7 +565,6 @@ document.addEventListener("click", (event) => {
   }
 });
 
-
 // Create a button container and style it
 const buttonContainer = document.createElement("div");
 buttonContainer.style.position = "absolute";
@@ -600,8 +605,8 @@ createButton({
   onClick: deleteSaveSlot,
 });
 
-
 function saveGame(slot: string) {
+  encodeGridState(); // Encode the current grid state before saving
   const saveData = {
     day,
     money,
@@ -610,7 +615,7 @@ function saveGame(slot: string) {
   };
 
   localStorage.setItem(`FishFarm_${slot}`, JSON.stringify(saveData));
-  if(slot === "AutoSave") return; 
+  if (slot === "AutoSave") return;
   alert(`Game saved to slot "${slot}".`);
 }
 
@@ -640,19 +645,24 @@ function loadGame(slot: string) {
 }
 
 function listSaveSlots() {
-  const slots = Object.keys(localStorage).filter((key) => key.startsWith("FishFarm_"));
-  alert(`Available save slots:\n${slots.map((slot) => slot.replace("FishFarm_", "")).join(", ")}`);
+  const slots = Object.keys(localStorage).filter((key) =>
+    key.startsWith("FishFarm_")
+  );
+  alert(
+    `Available save slots:\n${
+      slots.map((slot) => slot.replace("FishFarm_", "")).join(", ")
+    }`,
+  );
 }
 
 function deleteSaveSlot() {
   const slot = prompt("Enter save slot to delete (e.g., Slot1):");
   if (!slot) return;
-
-  localStorage.removeItem(`FishFarm_${slot}`);
-  alert(`Save slot "${slot}" deleted.`);
+  const savedData = localStorage.getItem(`FishFarm_${slot}`);
+  if (savedData) {
+    localStorage.removeItem(`FishFarm_${slot}`);
+    alert(`Save slot "${slot}" deleted.`);
+  } else {
+    alert(`No save data found for slot "${slot}".`);
+  }
 }
-
-
-
-
-
