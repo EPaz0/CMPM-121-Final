@@ -96,15 +96,26 @@ const moneyDisplay = createHeading({
 moneyDisplay.style.display = "inline";
 
 let objectiveReached = false;
-function changeMoney(change: number) {
-  money += change;
-  moneyDisplay.innerHTML = `💵 ${money}`;
+let dayReached = 0;
+function updateObjective() {
   // Check if objective reached
   if (money >= OBJECTIVE_MONEY && !objectiveReached) {
     objectiveReached = true;
+    dayReached = day;
     objectiveDisplay.innerHTML =
-      `<strike>Make 💵 ${OBJECTIVE_MONEY}</strike> You won in ${day} days!`;
+      `<strike>Make 💵 ${OBJECTIVE_MONEY}</strike> You won in ${dayReached} days!`;
   }
+  if (money < OBJECTIVE_MONEY && objectiveReached) {
+    objectiveReached = false;
+    dayReached = 0;
+    objectiveDisplay.innerHTML = `Make 💵 ${OBJECTIVE_MONEY}`;
+  }
+}
+
+function changeMoney(change: number) {
+  money += change;
+  moneyDisplay.innerHTML = `💵 ${money}`;
+  updateObjective();
 }
 
 interface Cell {
@@ -682,7 +693,6 @@ function getGameState(): GameState {
 function addGameState() {
   const gameState = getGameState();
   gameStates.push(gameState);
-  console.log(gameStates);
 }
 
 function autoSave() {
@@ -693,7 +703,6 @@ function autoSave() {
 function saveGame(slot: string) {
   // Save array of stringified game states to local storage rather than a single game state
   localStorage.setItem(`FishFarm_${slot}`, JSON.stringify(gameStates));
-  console.log(`saved current state with day ${day} and money ${money}`);
   if (slot === "AutoSave") return;
   alert(`Game saved to slot "${slot}".`);
 }
@@ -709,9 +718,7 @@ function restoreGameState(savedState: GameState) {
   money = savedState.money;
   gridStateView.set(savedState.gridState); // Restore the byte array
   decodeGridState(); // Rebuild the grid
-  console.log(
-    `restored game state with day ${savedState.day} and money ${savedState.money}`,
-  );
+  updateObjective();
   updateGameUI();
 }
 
@@ -730,7 +737,6 @@ function loadGame(slot: string) {
     gridState: state.gridState,
   }));
   const currState = gameStates[gameStates.length - 1];
-  console.log(gameStates);
   restoreGameState(currState);
 
   alert(`Game loaded from slot "${slot}".`);
