@@ -37,6 +37,8 @@ const playerCoordinates = { col: 0, row: 0 };
 let seed = 0; // For deterministic random generation, (0-10000)
 let day = 0;
 let money = STARTING_MONEY;
+let objectiveReached = false;
+let dayReached = 0;
 
 function generateSeed() {
   seed = Math.floor(Math.random() * 10001);
@@ -47,6 +49,8 @@ interface GameState {
   seed: number;
   day: number;
   money: number;
+  objectiveReached: boolean;
+  dayReached: number;
   gridState: number[];
 }
 let gameStates: GameState[] = []; // An array of game states going all the way back to the start of play
@@ -95,21 +99,30 @@ const moneyDisplay = createHeading({
 });
 moneyDisplay.style.display = "inline";
 
-let objectiveReached = false;
-let dayReached = 0;
+function updateObjectiveUI() {
+  if (objectiveReached) {
+    objectiveDisplay.innerHTML =
+      `<strike>Make 💵 ${OBJECTIVE_MONEY}</strike> You won in ${dayReached} days!`;
+  } else {
+    objectiveDisplay.innerHTML = `Make 💵 ${OBJECTIVE_MONEY}`;
+  }
+}
+
 function updateObjective() {
   // Check if objective reached
   if (money >= OBJECTIVE_MONEY && !objectiveReached) {
     objectiveReached = true;
     dayReached = day;
-    objectiveDisplay.innerHTML =
-      `<strike>Make 💵 ${OBJECTIVE_MONEY}</strike> You won in ${dayReached} days!`;
   }
+  // Check if objective is no longer fulfilled
   if (money < OBJECTIVE_MONEY && objectiveReached) {
     objectiveReached = false;
     dayReached = 0;
-    objectiveDisplay.innerHTML = `Make 💵 ${OBJECTIVE_MONEY}`;
   }
+  updateObjectiveUI();
+  console.log(
+    `Updating objective. Reached: ${objectiveReached} Day: ${dayReached}`,
+  );
 }
 
 function changeMoney(change: number) {
@@ -686,6 +699,8 @@ function getGameState(): GameState {
     seed: seed,
     day: day,
     money: money,
+    objectiveReached: objectiveReached,
+    dayReached: dayReached,
     gridState: Array.from(gridStateView), // Convert byte array to a regular array
   };
 }
@@ -716,6 +731,8 @@ function updateGameUI() {
 function restoreGameState(savedState: GameState) {
   day = savedState.day;
   money = savedState.money;
+  objectiveReached = savedState.objectiveReached;
+  dayReached = savedState.dayReached;
   gridStateView.set(savedState.gridState); // Restore the byte array
   decodeGridState(); // Rebuild the grid
   updateObjective();
@@ -734,6 +751,8 @@ function loadGame(slot: string) {
     seed: state.seed,
     day: state.day,
     money: state.money,
+    objectiveReached: state.objectiveReached,
+    dayReached: state.dayReached,
     gridState: state.gridState,
   }));
   const currState = gameStates[gameStates.length - 1];
