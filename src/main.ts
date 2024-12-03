@@ -40,11 +40,6 @@ let money = STARTING_MONEY;
 let objectiveReached = false;
 let dayReached = 0;
 
-function generateSeed() {
-  seed = Math.floor(Math.random() * 10001);
-}
-generateSeed();
-
 interface GameState {
   seed: number;
   day: number;
@@ -55,6 +50,11 @@ interface GameState {
 }
 let gameStates: GameState[] = []; // An array of game states going all the way back to the start of play
 const redoStates: GameState[] = []; // Array of game states that can be re-instantiated
+
+function generateSeed() {
+  seed = Math.floor(Math.random() * 10001);
+}
+generateSeed();
 
 // Game title heading
 createHeading({
@@ -729,6 +729,7 @@ function updateGameUI() {
 }
 
 function restoreGameState(savedState: GameState) {
+  seed = savedState.seed;
   day = savedState.day;
   money = savedState.money;
   objectiveReached = savedState.objectiveReached;
