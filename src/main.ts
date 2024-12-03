@@ -31,6 +31,19 @@ const CAPACITY_PENALTY = 2; // The amount by which max growth decreases for each
 const CELL_MAX_FOOD = 10;
 const CELL_MAX_SUNLIGHT = 10;
 
+// Game state variables
+const playerCoordinates = { col: 0, row: 0 };
+let day = 0;
+let money = STARTING_MONEY;
+
+interface GameState {
+  day: number;
+  money: number;
+  gridState: number[];
+}
+let gameStates: GameState[] = []; // An array of game states going all the way back to the start of play
+const redoStates: GameState[] = []; // Array of game states that can be re-instantiated
+
 // Game title heading
 createHeading({
   text: "Fish Farm",
@@ -51,7 +64,6 @@ const objectiveDisplay = createHeading({
   size: "h4",
 });
 
-let day = 0;
 const dayDisplay = createHeading({
   text: `Day ${day}`,
   div: headerDiv,
@@ -67,8 +79,6 @@ createButton({
     nextDay();
   },
 });
-
-let money = STARTING_MONEY;
 
 const moneyDisplay = createHeading({
   text: `💵 ${money}`,
@@ -87,10 +97,7 @@ function changeMoney(change: number) {
     objectiveDisplay.innerHTML =
       `<strike>Make 💵 ${OBJECTIVE_MONEY}</strike> You won in ${day} days!`;
   }
-  saveGame("AutoSave"); // Autosave when money changes
 }
-
-const playerCoordinates = { col: 0, row: 0 };
 
 interface Cell {
   x: number;
@@ -287,7 +294,6 @@ function addFish(cell: Cell, type: FishType, num: number) {
     };
     cell.population.push(fish);
   }
-  saveGame("AutoSave"); // Auto save when player buys a fish
 }
 
 // Create shop
@@ -306,6 +312,7 @@ fishTypes.forEach((fishType) => {
         const currentCell = grid[playerCoordinates.row][playerCoordinates.col];
         addFish(currentCell, fishType, 1);
         updateCellInfo(currentCell);
+        autoSave(); // Autosave when fish is bought
       }
     },
   }).append(costDisplay);
@@ -314,7 +321,6 @@ fishTypes.forEach((fishType) => {
 function movePlayer(newRow: number, newCol: number) {
   playerCoordinates.row = newRow;
   playerCoordinates.col = newCol;
-  saveGame("AutoSave"); // Autosave when player moves
 }
 
 function playerMovement(event: KeyboardEvent) {
@@ -386,10 +392,14 @@ function updateFishGrowth() {
           cell.food--;
 
           // Growth depends on fish type, food level, and amount of fish in cell
-          const fishOverMax = cell.population.length - CELL_CAPACITY_THRESHOLD;
+          const fishOverThreshold = cell.population.length -
+            CELL_CAPACITY_THRESHOLD;
           // Max growth goes down for every fish over the maximum cell capacity
-          const maxGrowth = fishOverMax > 0
-            ? Math.max(0, FISH_MAX_GROWTH - fishOverMax * CAPACITY_PENALTY)
+          const maxGrowth = fishOverThreshold > 0
+            ? Math.max(
+              0,
+              FISH_MAX_GROWTH - fishOverThreshold * CAPACITY_PENALTY,
+            )
             : FISH_MAX_GROWTH;
           const growthRate = fish.type.growthMultiplier;
           const prevFishGrowth = fish.growth;
@@ -445,7 +455,10 @@ function updateFishReproduction() {
         // Loop through number of pairs for each kind of fish to determine who reproduces
         for (let i = 0; i < pairs.length; i++) {
           for (let j = 0; j < pairs[i]; j++) {
-            if (Math.random() < REPRODUCTION_CHANCE) {
+            if (
+              Math.random() < REPRODUCTION_CHANCE &&
+              cell.population.length < CELL_MAX_CAPACITY
+            ) {
               addFish(cell, fishTypes[i], 1); // 50% chance of adding one fish per pair
             }
           }
@@ -470,12 +483,12 @@ if (localStorage.getItem("FishFarm_AutoSave")) {
   } else {
     // Optional: Allow user to start fresh but keep the existing AutoSave
     alert(
-      "Starting a new game. Autosave will overwrite your previous autosave.",
+      "Starting a new game. Autosave will overwrite existing autosave.",
     );
   }
 } else {
   alert("No autosave found. Starting a new game.");
-  saveGame("AutoSave"); // Create the first autosave
+  autoSave(); // Create the first autosave
 }
 
 updateCellInfo(grid[playerCoordinates.row][playerCoordinates.col]);
@@ -489,7 +502,7 @@ function nextDay() {
   updateCellInfo(grid[playerCoordinates.row][playerCoordinates.col]);
   day++;
   dayDisplay.innerHTML = `Day ${day}`;
-  saveGame("AutoSave"); // Autosave at the end of each day
+  autoSave(); // Autosave at the end of each day
 }
 
 document.addEventListener("keydown", (event) => {
@@ -503,7 +516,7 @@ function sellFish(cell: Cell, fish: Fish) {
   const fishIndex = cell.population.indexOf(fish);
   cell.population.splice(fishIndex, 1);
   updateCellInfo(cell);
-  saveGame("AutoSave"); // Auto save when player sells a fish
+  autoSave(); // Autosave when fish is sold
 }
 
 function fillPopup(cell: Cell) {
@@ -532,7 +545,7 @@ function fillPopup(cell: Cell) {
   }
 }
 
-let clickedCell: Cell;
+let clickedCell: Cell = grid[0][0];
 canvas.addEventListener("click", (event) => {
   const rect = canvas.getBoundingClientRect();
   const mouseX = event.x - rect.left;
@@ -554,7 +567,6 @@ canvas.addEventListener("click", (event) => {
 
 document.addEventListener("click", (event) => {
   const element = event.target as HTMLElement;
-  console.log(element.tagName);
   // If the player clicks something that isn't the canvas or shop buttons, remove popup
   if (
     element != canvas && element.tagName != "BUTTON" && element.tagName != "H5"
@@ -574,6 +586,32 @@ buttonContainer.style.display = "flex";
 buttonContainer.style.flexDirection = "row"; // Keep buttons horizontal
 buttonContainer.style.gap = "10px"; // Add spacing between buttons
 document.body.appendChild(buttonContainer);
+
+createButton({
+  text: "↩️", // Undo
+  div: buttonContainer,
+  onClick: () => {
+    if (gameStates.length > 1) {
+      const prevState = gameStates.pop();
+      redoStates.push(prevState!);
+      const newState = gameStates.pop();
+      restoreGameState(newState!);
+      autoSave();
+    }
+  },
+});
+
+createButton({
+  text: "↪️", // Redo
+  div: buttonContainer,
+  onClick: () => {
+    if (redoStates.length > 0) {
+      const newState = redoStates.pop();
+      restoreGameState(newState!);
+      autoSave();
+    }
+  },
+});
 
 createButton({
   text: "Save Game",
@@ -605,18 +643,49 @@ createButton({
   onClick: deleteSaveSlot,
 });
 
-function saveGame(slot: string) {
-  encodeGridState(); // Encode the current grid state before saving
-  const saveData = {
-    day,
-    money,
-    playerCoordinates,
+function getGameState(): GameState {
+  encodeGridState(); // Encode the current grid state before returning a representation of the game state
+  return {
+    day: day,
+    money: money,
     gridState: Array.from(gridStateView), // Convert byte array to a regular array
   };
+}
 
-  localStorage.setItem(`FishFarm_${slot}`, JSON.stringify(saveData));
+function addGameState() {
+  const gameState = getGameState();
+  gameStates.push(gameState);
+  console.log(gameStates);
+}
+
+function autoSave() {
+  addGameState();
+  saveGame("AutoSave");
+}
+
+function saveGame(slot: string) {
+  // Save array of stringified game states to local storage rather than a single game state
+  localStorage.setItem(`FishFarm_${slot}`, JSON.stringify(gameStates));
+  console.log(`saved current state with day ${day} and money ${money}`);
   if (slot === "AutoSave") return;
   alert(`Game saved to slot "${slot}".`);
+}
+
+function updateGameUI() {
+  dayDisplay.innerHTML = `Day ${day}`;
+  moneyDisplay.innerHTML = `💵 ${money}`;
+  updateCellInfo(grid[playerCoordinates.row][playerCoordinates.col]);
+}
+
+function restoreGameState(savedState: GameState) {
+  day = savedState.day;
+  money = savedState.money;
+  gridStateView.set(savedState.gridState); // Restore the byte array
+  decodeGridState(); // Rebuild the grid
+  console.log(
+    `restored game state with day ${savedState.day} and money ${savedState.money}`,
+  );
+  updateGameUI();
 }
 
 function loadGame(slot: string) {
@@ -626,20 +695,15 @@ function loadGame(slot: string) {
     return;
   }
 
-  const saveData = JSON.parse(savedData);
-
-  // Restore game state
-  day = saveData.day;
-  money = saveData.money;
-  playerCoordinates.col = saveData.playerCoordinates.col;
-  playerCoordinates.row = saveData.playerCoordinates.row;
-  gridStateView.set(saveData.gridState); // Restore the byte array
-  decodeGridState(); // Rebuild the grid
-
-  // Update UI
-  dayDisplay.innerHTML = `Day ${day}`;
-  moneyDisplay.innerHTML = `💵 ${money}`;
-  updateCellInfo(grid[playerCoordinates.row][playerCoordinates.col]);
+  const savedStates = JSON.parse(savedData);
+  gameStates = savedStates.map((state: GameState) => ({
+    day: state.day,
+    money: state.money,
+    gridState: state.gridState,
+  }));
+  const currState = gameStates[gameStates.length - 1];
+  console.log(gameStates);
+  restoreGameState(currState);
 
   alert(`Game loaded from slot "${slot}".`);
 }
