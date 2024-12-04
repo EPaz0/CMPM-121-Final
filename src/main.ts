@@ -19,8 +19,10 @@ const shopDiv = document.querySelector<HTMLDivElement>("#shop")!;
 const objectivesDiv = document.querySelector<HTMLDivElement>("#objectives")!;
 
 // Modifiable gameplay values
+const SEEDS = 10000; // The number of random seeds there are
 const STARTING_MONEY = 30;
 const OBJECTIVE_MONEY = 500;
+const GRID_SIZE = { rows: 4, cols: 5 };
 const BASE_FISH_COST = 15;
 const REPRODUCTION_CHANCE = 0.2;
 const SUNLIGHT_CHANGE_CHANCE = 0.4;
@@ -32,112 +34,9 @@ const CAPACITY_PENALTY = 2; // The amount by which max growth decreases for each
 const CELL_MAX_FOOD = 10;
 const CELL_MAX_SUNLIGHT = 10;
 
-// Game state variables
-const playerCoordinates = { col: 0, row: 0 };
-let seed = 0; // For deterministic random generation, (0-10000)
-let day = 0;
-let money = STARTING_MONEY;
-let objectiveReached = false;
-let dayReached = 0;
-
-interface GameState {
-  seed: number;
-  day: number;
-  money: number;
-  objectiveReached: boolean;
-  dayReached: number;
-  gridState: number[];
-}
-let gameStates: GameState[] = []; // An array of game states going all the way back to the start of play
-const redoStates: GameState[] = []; // Array of game states that can be re-instantiated
-
-function generateSeed() {
-  seed = Math.floor(Math.random() * 10001);
-}
-generateSeed();
-
-// Game title heading
-createHeading({
-  text: "Fish Farm",
-  div: headerDiv,
-  size: "h1",
-});
-
-createHeading({
-  text: "Shop",
-  div: shopDiv,
-  size: "h2",
-});
-
-createHeading({ text: "Objective", div: objectivesDiv, size: "h2" });
-const objectiveDisplay = createHeading({
-  text: `Make 💵 ${OBJECTIVE_MONEY}`,
-  div: objectivesDiv,
-  size: "h4",
-});
-
-const dayDisplay = createHeading({
-  text: `Day ${day}`,
-  div: headerDiv,
-  size: "h3",
-});
-dayDisplay.style.display = "inline";
-dayDisplay.style.marginRight = "20px";
-
-createButton({
-  text: "Next Day",
-  div: headerDiv,
-  onClick: () => {
-    nextDay();
-  },
-});
-
-const moneyDisplay = createHeading({
-  text: `💵 ${money}`,
-  div: headerDiv,
-  size: "h2",
-});
-moneyDisplay.style.display = "inline";
-
-function updateObjectiveUI() {
-  if (objectiveReached) {
-    objectiveDisplay.innerHTML =
-      `<strike>Make 💵 ${OBJECTIVE_MONEY}</strike> You won in ${dayReached} days!`;
-  } else {
-    objectiveDisplay.innerHTML = `Make 💵 ${OBJECTIVE_MONEY}`;
-  }
-}
-
-function updateObjective() {
-  // Check if objective reached
-  if (money >= OBJECTIVE_MONEY && !objectiveReached) {
-    objectiveReached = true;
-    dayReached = day;
-  }
-  // Check if objective is no longer fulfilled
-  if (money < OBJECTIVE_MONEY && objectiveReached) {
-    objectiveReached = false;
-    dayReached = 0;
-  }
-  updateObjectiveUI();
-  console.log(
-    `Updating objective. Reached: ${objectiveReached} Day: ${dayReached}`,
-  );
-}
-
-function changeMoney(change: number) {
-  money += change;
-  moneyDisplay.innerHTML = `💵 ${money}`;
-  updateObjective();
-}
-
-interface Cell {
-  x: number;
-  y: number;
-  sunlight: number;
-  food: number;
-  population: Fish[];
-}
+// Modifiable visual values
+const CELL_SIZE = 150; // Size of each grid cell
+const GRID_OFFSET = 10;
 
 type FishTypeName = "Green" | "Yellow" | "Red";
 
@@ -180,144 +79,8 @@ const fishTypes: FishType[] = [
   },
 ];
 
-const rows = 4;
-const cols = 5;
-const cellSize = 150; // Size of each grid cell
-const gridOffset = 10;
-canvas.width = cols * cellSize + gridOffset; // Set canvas width based on grid
-canvas.height = rows * cellSize + gridOffset; // Set canvas height based on grid
-
-const bytesPerCell = 3 + CELL_MAX_CAPACITY * 4; // 3 for cell data, 4 per fish
-const gridStateBuffer = new ArrayBuffer(rows * cols * bytesPerCell);
-const gridStateView = new Uint8Array(gridStateBuffer);
-
-// Encodes grid state into the byte array
-function encodeGridState() {
-  let index = 0;
-  for (let row = 0; row < rows; row++) {
-    for (let col = 0; col < cols; col++) {
-      const cell = grid[row][col];
-      gridStateView[index++] = cell.sunlight;
-      gridStateView[index++] = cell.food;
-      gridStateView[index++] = cell.population.length;
-
-      // Encode fish data
-      for (let i = 0; i < CELL_MAX_CAPACITY; i++) {
-        if (i < cell.population.length) {
-          const fish = cell.population[i];
-          gridStateView[index++] = fish.type.typeName === "Green"
-            ? 0
-            : fish.type.typeName === "Yellow"
-            ? 1
-            : 2;
-          gridStateView[index++] = fish.growth;
-          gridStateView[index++] = fish.food;
-          gridStateView[index++] = fish.value;
-        } else {
-          // Fill unused fish slots with zeros
-          gridStateView[index++] = 0; // Type
-          gridStateView[index++] = 0; // Growth
-          gridStateView[index++] = 0; // Food
-          gridStateView[index++] = 0; // Value
-        }
-      }
-    }
-  }
-}
-
-// Decodes the byte array back into the grid
-function decodeGridState() {
-  let index = 0;
-  for (let row = 0; row < rows; row++) {
-    for (let col = 0; col < cols; col++) {
-      const cell = grid[row][col];
-      cell.sunlight = gridStateView[index++];
-      cell.food = gridStateView[index++];
-      const populationCount = gridStateView[index++];
-
-      // Clear current fish population
-      cell.population = [];
-
-      // Decode fish data
-      for (let i = 0; i < populationCount; i++) {
-        const typeIndex = gridStateView[index++];
-        const type = fishTypes[typeIndex];
-        const growth = gridStateView[index++];
-        const food = gridStateView[index++];
-        const value = gridStateView[index++];
-        cell.population.push({ type, growth, food, value });
-      }
-
-      // Skip unused fish slots
-      index += (CELL_MAX_CAPACITY - populationCount) * 4;
-    }
-  }
-}
-
-const grid: Cell[][] = Array.from(
-  { length: rows },
-  (_, rowIndex) =>
-    Array.from({ length: cols }, (_, colIndex) => ({
-      x: colIndex * cellSize + gridOffset / 2,
-      y: rowIndex * cellSize + gridOffset / 2,
-      sunlight: Math.floor(
-        luck([rowIndex, colIndex, seed, "sun"].toString()) * CELL_MAX_SUNLIGHT,
-      ) + 1,
-      food: Math.floor(
-        luck([rowIndex, colIndex, seed, "food"].toString()) * CELL_MAX_FOOD,
-      ) + 1,
-      population: [],
-    })),
-);
-
-function drawCell(ctx: CanvasRenderingContext2D, cell: Cell) {
-  if (ctx) {
-    ctx.lineWidth = 4;
-    ctx.strokeStyle = "lightblue";
-    ctx.fillStyle = "lightcyan";
-    ctx.strokeRect(cell.x, cell.y, cellSize, cellSize);
-    ctx.fillRect(cell.x, cell.y, cellSize, cellSize);
-    ctx.font = "20px arial";
-    ctx.lineWidth = 1;
-    ctx.strokeStyle = "orange";
-    ctx.strokeText(`☀️ ${cell.sunlight}`, cell.x + 10, cell.y + 30);
-    ctx.strokeStyle = "red";
-    ctx.strokeText(`🍎 ${cell.food}`, cell.x + 10, cell.y + 50);
-    ctx.strokeStyle = "blue";
-    ctx.strokeText(`🐟 ${cell.population.length}`, cell.x + 10, cell.y + 70);
-  }
-}
-
-function drawGrid(ctx: CanvasRenderingContext2D) {
-  grid.forEach((row) => row.forEach((cell) => drawCell(ctx, cell)));
-}
-
-function drawPlayer(ctx: CanvasRenderingContext2D) {
-  const cellX = playerCoordinates.col * cellSize + gridOffset / 2;
-  const cellY = playerCoordinates.row * cellSize + gridOffset / 2;
-  ctx.strokeStyle = "limegreen";
-  ctx.lineWidth = 8;
-  ctx.strokeRect(cellX, cellY, cellSize, cellSize);
-}
-
 function fishToString(fish: Fish) {
   return `\n${fish.type.typeName} Fish | Growth: ${fish.growth}/${FISH_MAX_GROWTH}, Food: ${fish.food}/${FISH_MAX_FOOD}, Value: ${fish.value}`;
-}
-
-function updateCellInfo(cell: Cell) {
-  const cellInfoDiv = document.getElementById("cell-info");
-  if (cellInfoDiv) {
-    cellInfoDiv.innerText =
-      `Cell (${playerCoordinates.row}, ${playerCoordinates.col})
-    ☀️ Sunlight: ${cell.sunlight}
-    🍎 Food: ${cell.food}
-    🐟 Fish: ${cell.population.length}`;
-    if (cell.population.length > 0) {
-      cell.population.forEach((fish) => {
-        cellInfoDiv.innerText += fishToString(fish);
-      });
-    }
-  }
 }
 
 function addFish(cell: Cell, type: FishType, num: number) {
@@ -332,36 +95,500 @@ function addFish(cell: Cell, type: FishType, num: number) {
   }
 }
 
-// Create shop
-fishTypes.forEach((fishType) => {
-  const costDisplay = createHeading({
-    text: `💵 ${fishType.cost}`,
-    div: shopDiv,
-    size: "h5",
-  });
-  createButton({
-    text: `Buy ${fishType.typeName} Fish`,
-    div: shopDiv,
-    onClick: () => {
-      if (money >= fishType.cost) {
-        changeMoney(-fishType.cost);
-        const currentCell = grid[playerCoordinates.row][playerCoordinates.col];
-        addFish(currentCell, fishType, 1);
-        updateCellInfo(currentCell);
-        autoSave(); // Autosave when fish is bought
-      }
-    },
-  }).append(costDisplay);
-});
-
-function movePlayer(newRow: number, newCol: number) {
-  playerCoordinates.row = newRow;
-  playerCoordinates.col = newCol;
+// Returns an array of a certain type of fish in a given cell
+function getFishOfType(cell: Cell, typeName: FishTypeName) {
+  const fish: Fish[] = [];
+  for (let i = 0; i < cell.population.length; i++) {
+    if (cell.population[i].type.typeName == typeName) {
+      fish.push(cell.population[i]);
+    }
+  }
+  return fish;
 }
 
-function playerMovement(event: KeyboardEvent) {
-  let newRow = playerCoordinates.row;
-  let newCol = playerCoordinates.col;
+class Cell {
+  x: number;
+  y: number;
+  sunlight: number;
+  food: number;
+  population: Fish[];
+
+  constructor(x: number, y: number) {
+    this.x = x;
+    this.y = y;
+    this.sunlight = 0;
+    this.food = 0;
+    this.population = [];
+  }
+
+  draw(ctx: CanvasRenderingContext2D) {
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = "lightblue";
+    ctx.fillStyle = "lightcyan";
+    ctx.strokeRect(this.x, this.y, CELL_SIZE, CELL_SIZE);
+    ctx.fillRect(this.x, this.y, CELL_SIZE, CELL_SIZE);
+    ctx.font = "20px arial";
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = "orange";
+    ctx.strokeText(`☀️ ${this.sunlight}`, this.x + 10, this.y + 30);
+    ctx.strokeStyle = "red";
+    ctx.strokeText(`🍎 ${this.food}`, this.x + 10, this.y + 50);
+    ctx.strokeStyle = "blue";
+    ctx.strokeText(
+      `🐟 ${this.population.length}`,
+      this.x + 10,
+      this.y + 70,
+    );
+  }
+
+  updateSunlight(day: number, seed: number) {
+    // Randomly decide to increase or decrease sunlight, or keep it the same
+    const randChange =
+      luck([this.x, this.y, day, seed, "randchange"].toString()) < 0.5 ? -1 : 1;
+    const change = luck([this.x, this.y, day, seed, "realchange"].toString()) <
+        SUNLIGHT_CHANGE_CHANCE
+      ? 0
+      : randChange;
+    // Ensure sunlight is between 1 and maximum
+    this.sunlight = Math.max(
+      1,
+      Math.min(CELL_MAX_SUNLIGHT, this.sunlight + change),
+    );
+  }
+
+  updateFood() {
+    this.food = Math.min(CELL_MAX_FOOD, this.food + this.sunlight); // Food is proportional to sunlight
+  }
+
+  updateFishGrowth(day: number, seed: number) {
+    this.population.forEach((fish) => {
+      if (this.food > 0) {
+        fish.food = Math.min(FISH_MAX_FOOD, fish.food + 1); // Fish food level capped at 3
+        this.food--;
+
+        // Growth depends on fish type, food level, and amount of fish in cell
+        const fishOverThreshold = this.population.length -
+          CELL_CAPACITY_THRESHOLD;
+        // Max growth goes down for every fish over the maximum cell capacity
+        const maxGrowth = fishOverThreshold > 0
+          ? Math.max(
+            0,
+            FISH_MAX_GROWTH - fishOverThreshold * CAPACITY_PENALTY,
+          )
+          : FISH_MAX_GROWTH;
+        const growthRate = fish.type.growthMultiplier;
+        const prevFishGrowth = fish.growth;
+        if (prevFishGrowth < maxGrowth) {
+          fish.growth += fish.food * growthRate;
+          fish.growth = Math.min(maxGrowth, fish.growth);
+        }
+
+        // Add a random amount of value for each growth level gained
+        for (let i = 0; i < fish.growth - prevFishGrowth; i++) {
+          fish.value += Math.floor(
+            luck(
+                  [this.food, this.population.length, day, i, seed, "value"]
+                    .toString(),
+                ) *
+                (fish.type.maxValueGain - fish.type.minValueGain + 1) +
+              fish.type.minValueGain,
+          );
+        }
+      } else {
+        // If no food, fish dies
+        fish.food -= 1;
+        if (fish.food < 0) {
+          const index = this.population.indexOf(fish);
+          this.population.splice(index, 1);
+        }
+      }
+    });
+  }
+
+  updatePopulation(day: number, seed: number) {
+    if (this.population.length >= 2 && this.food > 0) {
+      const pairs = [];
+      // Number of pairs for each kind of fish
+      pairs.push(Math.floor(getFishOfType(this, "Green").length / 2));
+      pairs.push(Math.floor(getFishOfType(this, "Yellow").length / 2));
+      pairs.push(Math.floor(getFishOfType(this, "Red").length / 2));
+      // Loop through number of pairs for each kind of fish to determine who reproduces
+      for (let i = 0; i < pairs.length; i++) {
+        for (let j = 0; j < pairs[i]; j++) {
+          if (
+            luck(
+                [this.x, this.y, i, j, day, seed, "reproduction"].toString(),
+              ) <
+              REPRODUCTION_CHANCE &&
+            this.population.length < CELL_MAX_CAPACITY
+          ) {
+            addFish(this, fishTypes[i], 1); // 50% chance of adding one fish per pair
+          }
+        }
+      }
+    }
+  }
+
+  updateInfoUI() {
+    const cellInfoDiv = document.getElementById("cell-info");
+    if (cellInfoDiv) {
+      cellInfoDiv.innerText =
+        `Cell (${gameManager.player.coords.row}, ${gameManager.player.coords.col})
+    ☀️ Sunlight: ${this.sunlight}
+    🍎 Food: ${this.food}
+    🐟 Fish: ${this.population.length}`;
+      if (this.population.length > 0) {
+        this.population.forEach((fish) => {
+          cellInfoDiv.innerText += fishToString(fish);
+        });
+      }
+    }
+  }
+
+  updatePopupUI() {
+    popup.innerHTML = "";
+    if (this.population.length > 0) {
+      this.population.forEach((fish) => {
+        createHeading({
+          text: fishToString(fish),
+          div: popup,
+          size: "h5",
+        });
+        createButton({
+          text: "Sell",
+          div: popup,
+          onClick: () => {
+            sellFish(this, fish);
+          },
+        });
+      });
+    } else {
+      createHeading({
+        text: "No fish in this cell.",
+        div: popup,
+        size: "h5",
+      });
+    }
+  }
+}
+
+class Grid {
+  seed: number;
+  rows: number;
+  cols: number;
+  cells: Cell[][];
+  state: Uint8Array;
+
+  constructor() {
+    this.seed = getRandomSeed(SEEDS);
+    this.rows = GRID_SIZE.rows;
+    this.cols = GRID_SIZE.cols;
+    this.cells = Array.from(
+      { length: this.rows },
+      (_, rowIndex) =>
+        Array.from({ length: this.cols }, (_, colIndex) => (
+          new Cell(
+            colIndex * CELL_SIZE + GRID_OFFSET / 2,
+            rowIndex * CELL_SIZE + GRID_OFFSET / 2,
+          )
+        )),
+    );
+    const bytesPerCell = 3 + CELL_MAX_CAPACITY * 4; // 3 for cell data, 4 per fish
+    const buffer = new ArrayBuffer(this.rows * this.cols * bytesPerCell);
+    this.state = new Uint8Array(buffer);
+  }
+
+  draw(ctx: CanvasRenderingContext2D) {
+    this.cells.forEach((row) =>
+      row.forEach((cell) => {
+        cell.draw(ctx);
+      })
+    );
+  }
+
+  setInitialCellStats() {
+    this.cells.forEach((row) =>
+      row.forEach((cell) => {
+        const sSeed = [cell.x, cell.y, this.seed, "sun"].toString();
+        const fSeed = [cell.x, cell.y, this.seed, "food"].toString();
+        cell.sunlight = Math.floor(luck(sSeed) * CELL_MAX_SUNLIGHT) + 1;
+        cell.food = Math.floor(luck(fSeed) * CELL_MAX_FOOD) + 1;
+      })
+    );
+    this.encode();
+  }
+
+  // Encodes grid state into the byte array
+  encode() {
+    let index = 0;
+    for (let row = 0; row < this.rows; row++) {
+      for (let col = 0; col < this.cols; col++) {
+        const cell = this.cells[row][col];
+        this.state[index++] = cell.sunlight;
+        this.state[index++] = cell.food;
+        this.state[index++] = cell.population.length;
+
+        // Encode fish data
+        for (let i = 0; i < CELL_MAX_CAPACITY; i++) {
+          if (i < cell.population.length) {
+            const fish = cell.population[i];
+            this.state[index++] = fish.type.typeName === "Green"
+              ? 0
+              : fish.type.typeName === "Yellow"
+              ? 1
+              : 2;
+            this.state[index++] = fish.growth;
+            this.state[index++] = fish.food;
+            this.state[index++] = fish.value;
+          } else {
+            // Fill unused fish slots with zeros
+            this.state[index++] = 0; // Type
+            this.state[index++] = 0; // Growth
+            this.state[index++] = 0; // Food
+            this.state[index++] = 0; // Value
+          }
+        }
+      }
+    }
+  }
+
+  // Decodes the byte array back into the grid
+  decode() {
+    let index = 0;
+    for (let row = 0; row < this.rows; row++) {
+      for (let col = 0; col < this.cols; col++) {
+        const cell = this.cells[row][col];
+        cell.sunlight = this.state[index++];
+        cell.food = this.state[index++];
+        const populationCount = this.state[index++];
+
+        // Clear current fish population
+        cell.population = [];
+
+        // Decode fish data
+        for (let i = 0; i < populationCount; i++) {
+          const typeIndex = this.state[index++];
+          const type = fishTypes[typeIndex];
+          const growth = this.state[index++];
+          const food = this.state[index++];
+          const value = this.state[index++];
+          cell.population.push({ type, growth, food, value });
+        }
+
+        // Skip unused fish slots
+        index += (CELL_MAX_CAPACITY - populationCount) * 4;
+      }
+    }
+  }
+}
+
+interface GameState {
+  day: number;
+  money: number;
+  won: boolean;
+  dayWon: number;
+  gridState: number[];
+}
+
+function createGameState(grid: Grid) {
+  return {
+    day: 0,
+    money: STARTING_MONEY,
+    won: false,
+    dayWon: 0,
+    gridState: Array.from(grid.state),
+  };
+}
+
+class Player {
+  coords: { row: number; col: number };
+
+  constructor() {
+    this.coords = { row: 0, col: 0 };
+  }
+
+  draw(ctx: CanvasRenderingContext2D) {
+    const cellX = this.coords.col * CELL_SIZE + GRID_OFFSET / 2;
+    const cellY = this.coords.row * CELL_SIZE + GRID_OFFSET / 2;
+    ctx.strokeStyle = "limegreen";
+    ctx.lineWidth = 8;
+    ctx.strokeRect(cellX, cellY, CELL_SIZE, CELL_SIZE);
+  }
+
+  move(newRow: number, newCol: number) {
+    this.coords.row = newRow;
+    this.coords.col = newCol;
+  }
+}
+
+interface GameSave {
+  seed: number;
+  gameStates: GameState[];
+}
+
+function getRandomSeed(max: number) {
+  return Math.floor(Math.random() * max + 1);
+}
+
+class GameManager {
+  grid: Grid;
+  player: Player;
+  currSave: GameSave;
+  currState: GameState;
+  redoStates: GameState[]; // Array of game states that can be re-instantiated
+
+  constructor() {
+    this.grid = new Grid();
+    this.grid.setInitialCellStats();
+    this.player = new Player();
+    this.currSave = {
+      seed: this.grid.seed,
+      gameStates: [createGameState(this.grid)],
+    };
+    this.currState = createGameState(this.grid);
+    this.redoStates = [];
+
+    // Set up canvas based on grid size
+    canvas.width = this.grid.cols * CELL_SIZE + GRID_OFFSET;
+    canvas.height = this.grid.rows * CELL_SIZE + GRID_OFFSET;
+    // Listen for player's keyboard movement
+    document.addEventListener("keydown", (e) => {
+      handleKeyboardMovement(this, e);
+    });
+  }
+
+  restoreGameState(gameState: GameState) {
+    this.currState.day = gameState.day;
+    this.currState.money = gameState.money;
+    this.currState.won = gameState.won;
+    this.currState.dayWon = gameState.dayWon;
+    this.grid.state.set(gameState.gridState); // Restore the byte array
+    this.grid.decode(); // Rebuild the grid
+    updateObjective();
+    this.updateGameUI();
+  }
+
+  restoreGameSave(gameSave: GameSave) {
+    this.currSave.seed = gameSave.seed;
+    this.currSave.gameStates = gameSave.gameStates.map((
+      state: GameState,
+    ) => ({
+      day: state.day,
+      money: state.money,
+      won: state.won,
+      dayWon: state.dayWon,
+      gridState: state.gridState,
+    }));
+    this.currState =
+      this.currSave.gameStates[this.currSave.gameStates.length - 1];
+    this.restoreGameState(this.currState);
+  }
+
+  saveToSlot(slot: string) {
+    // Save game save object with a seed and array of game states
+    localStorage.setItem(
+      `FishFarm_${slot}`,
+      JSON.stringify(this.currSave),
+    );
+    if (slot === "AutoSave") return;
+    alert(`Game saved to slot "${slot}".`);
+  }
+
+  autoSave() {
+    this.grid.encode(); // Encode the current grid state before returning a representation of the game state
+    const gameState = {
+      day: this.currState.day,
+      money: this.currState.money,
+      won: this.currState.won,
+      dayWon: this.currState.dayWon,
+      gridState: Array.from(this.grid.state), // Convert byte array to a regular array
+    };
+    this.currSave.gameStates.push(gameState);
+    this.saveToSlot("AutoSave");
+    console.log("autosaved");
+    console.log(this.currSave);
+  }
+
+  loadFromSlot(slot: string) {
+    const rawData = localStorage.getItem(`FishFarm_${slot}`);
+    if (!rawData) {
+      alert(`No save data found for slot "${slot}".`);
+      return;
+    }
+    const saveData = JSON.parse(rawData);
+    this.restoreGameSave(saveData);
+    alert(`Game loaded from slot "${slot}".`);
+  }
+
+  deleteSlot(slot: string) {
+    const savedData = localStorage.getItem(`FishFarm_${slot}`);
+    if (savedData) {
+      localStorage.removeItem(`FishFarm_${slot}`);
+      alert(`Save slot "${slot}" deleted.`);
+    } else {
+      alert(`No save data found for slot "${slot}".`);
+    }
+  }
+
+  displaySaveSlots() {
+    const slots = Object.keys(localStorage).filter((key) =>
+      key.startsWith("FishFarm_")
+    );
+    alert(
+      `Available save slots:\n${
+        slots.map((slot) => slot.replace("FishFarm_", "")).join(", ")
+      }`,
+    );
+  }
+
+  undo() {
+    if (this.currSave.gameStates.length > 1) {
+      const prevState = this.currSave.gameStates.pop();
+      this.redoStates.push(prevState!);
+      const newState = this.currSave.gameStates.pop();
+      this.restoreGameState(newState!);
+      this.autoSave();
+    }
+  }
+
+  redo() {
+    if (this.redoStates.length > 0) {
+      const newState = this.redoStates.pop();
+      this.restoreGameState(newState!);
+      this.autoSave();
+    }
+  }
+
+  nextDay() {
+    this.grid.cells.forEach((row) =>
+      row.forEach((cell) => {
+        cell.updateFood();
+        cell.updateFishGrowth(this.currState.day, this.currSave.seed);
+        cell.updatePopulation(this.currState.day, this.currSave.seed);
+        cell.updateSunlight(this.currState.day, this.currSave.seed);
+        cell.updateInfoUI();
+      })
+    );
+    this.currState.day++;
+    dayDisplay.innerHTML = `Day ${this.currState.day}`;
+    this.autoSave(); // Autosave at the end of each day
+  }
+
+  updateGameUI() {
+    dayDisplay.innerHTML = `Day ${this.currState.day}`;
+    moneyDisplay.innerHTML = `💵 ${this.currState.money}`;
+    const currentCell =
+      this.grid.cells[this.player.coords.row][this.player.coords.col];
+    currentCell.updateInfoUI();
+  }
+}
+
+function handleKeyboardMovement(
+  gameManager: GameManager,
+  event: KeyboardEvent,
+) {
+  let newRow = gameManager.player.coords.row;
+  let newCol = gameManager.player.coords.col;
 
   switch (event.key) {
     case "ArrowRight":
@@ -386,149 +613,134 @@ function playerMovement(event: KeyboardEvent) {
       break;
   }
 
-  if (newRow >= 0 && newRow < rows && newCol >= 0 && newCol < cols) {
-    movePlayer(newRow, newCol);
+  if (
+    newRow >= 0 && newRow < gameManager.grid.rows && newCol >= 0 &&
+    newCol < gameManager.grid.cols
+  ) {
+    gameManager.player.move(newRow, newCol);
   }
 
-  const newCell = grid[newRow][newCol];
-  updateCellInfo(newCell);
+  const newCell = gameManager.grid.cells[newRow][newCol];
+  newCell.updateInfoUI();
   popup.style.display = "none"; // Remove popup when player moves using keyboard
 }
-document.addEventListener("keydown", playerMovement);
 
-function updateSunlight() {
-  grid.forEach((row) => {
-    row.forEach((cell) => {
-      // Randomly decide to increase or decrease sunlight, or keep it the same
-      const randChange =
-        luck([cell.x, cell.y, day, seed, "randchange"].toString()) < 0.5
-          ? -1
-          : 1;
-      const change =
-        luck([cell.x, cell.y, day, seed, "realchange"].toString()) <
-            SUNLIGHT_CHANGE_CHANCE
-          ? 0
-          : randChange;
-      // Ensure sunlight is between 1 and maximum
-      cell.sunlight = Math.max(
-        1,
-        Math.min(CELL_MAX_SUNLIGHT, cell.sunlight + change),
-      );
-    });
-  });
-}
+const gameManager = new GameManager();
 
-function regenerateFood() {
-  grid.forEach((row) => {
-    row.forEach((cell) => {
-      cell.food = Math.min(CELL_MAX_FOOD, cell.food + cell.sunlight); // Food is proportional to sunlight
-    });
-  });
-}
+// Game title heading
+createHeading({
+  text: "Fish Farm",
+  div: headerDiv,
+  size: "h1",
+});
 
-function updateFishGrowth() {
-  grid.forEach((row) => {
-    row.forEach((cell) => {
-      cell.population.forEach((fish) => {
-        if (cell.food > 0) {
-          fish.food = Math.min(FISH_MAX_FOOD, fish.food + 1); // Fish food level capped at 3
-          cell.food--;
+createHeading({
+  text: "Shop",
+  div: shopDiv,
+  size: "h2",
+});
 
-          // Growth depends on fish type, food level, and amount of fish in cell
-          const fishOverThreshold = cell.population.length -
-            CELL_CAPACITY_THRESHOLD;
-          // Max growth goes down for every fish over the maximum cell capacity
-          const maxGrowth = fishOverThreshold > 0
-            ? Math.max(
-              0,
-              FISH_MAX_GROWTH - fishOverThreshold * CAPACITY_PENALTY,
-            )
-            : FISH_MAX_GROWTH;
-          const growthRate = fish.type.growthMultiplier;
-          const prevFishGrowth = fish.growth;
-          if (prevFishGrowth < maxGrowth) {
-            fish.growth += fish.food * growthRate;
-            fish.growth = Math.min(maxGrowth, fish.growth);
-          }
+createHeading({ text: "Objective", div: objectivesDiv, size: "h2" });
+const objectiveDisplay = createHeading({
+  text: `Make 💵 ${OBJECTIVE_MONEY}`,
+  div: objectivesDiv,
+  size: "h4",
+});
 
-          // Add a random amount of value for each growth level gained
-          for (let i = 0; i < fish.growth - prevFishGrowth; i++) {
-            fish.value += Math.floor(
-              luck(
-                    [cell.food, cell.population.length, day, i, seed, "value"]
-                      .toString(),
-                  ) *
-                  (fish.type.maxValueGain - fish.type.minValueGain + 1) +
-                fish.type.minValueGain,
-            );
-          }
-        } else {
-          // If no food, fish dies
-          fish.food -= 1;
-          if (fish.food < 0) {
-            const index = cell.population.indexOf(fish);
-            cell.population.splice(index, 1);
-          }
-        }
-      });
-    });
-  });
-}
+const dayDisplay = createHeading({
+  text: `Day ${gameManager.currState.day}`,
+  div: headerDiv,
+  size: "h3",
+});
+dayDisplay.style.display = "inline";
+dayDisplay.style.marginRight = "20px";
 
-// Ensure initial encoding
-encodeGridState();
+createButton({
+  text: "Next Day",
+  div: headerDiv,
+  onClick: () => {
+    gameManager.nextDay();
+  },
+});
 
-// Returns an array of a certain type of fish in a given cell
-function getFishOfType(cell: Cell, typeName: FishTypeName) {
-  const fish: Fish[] = [];
-  for (let i = 0; i < cell.population.length; i++) {
-    if (cell.population[i].type.typeName == typeName) {
-      fish.push(cell.population[i]);
-    }
+const moneyDisplay = createHeading({
+  text: `💵 ${gameManager.currState.money}`,
+  div: headerDiv,
+  size: "h2",
+});
+moneyDisplay.style.display = "inline";
+
+function updateObjectiveUI() {
+  if (gameManager.currState.won) {
+    objectiveDisplay.innerHTML =
+      `<strike>Make 💵 ${OBJECTIVE_MONEY}</strike> You won in ${gameManager.currState.dayWon} days!`;
+  } else {
+    objectiveDisplay.innerHTML = `Make 💵 ${OBJECTIVE_MONEY}`;
   }
-  return fish;
 }
 
-function updateFishReproduction() {
-  grid.forEach((row) => {
-    row.forEach((cell) => {
-      if (cell.population.length >= 2 && cell.food > 0) {
-        const pairs = [];
-        // Number of pairs for each kind of fish
-        pairs.push(Math.floor(getFishOfType(cell, "Green").length / 2));
-        pairs.push(Math.floor(getFishOfType(cell, "Yellow").length / 2));
-        pairs.push(Math.floor(getFishOfType(cell, "Red").length / 2));
-        // Loop through number of pairs for each kind of fish to determine who reproduces
-        for (let i = 0; i < pairs.length; i++) {
-          for (let j = 0; j < pairs[i]; j++) {
-            if (
-              luck(
-                  [cell.x, cell.y, i, j, day, seed, "reproduction"].toString(),
-                ) <
-                REPRODUCTION_CHANCE &&
-              cell.population.length < CELL_MAX_CAPACITY
-            ) {
-              addFish(cell, fishTypes[i], 1); // 50% chance of adding one fish per pair
-            }
-          }
-        }
-      }
-    });
-  });
+function updateObjective() {
+  // Check if objective reached
+  if (
+    gameManager.currState.money >= OBJECTIVE_MONEY && !gameManager.currState.won
+  ) {
+    gameManager.currState.won = true;
+    gameManager.currState.dayWon = gameManager.currState.day;
+  }
+  // Check if objective is no longer fulfilled
+  if (
+    gameManager.currState.money < OBJECTIVE_MONEY && gameManager.currState.won
+  ) {
+    gameManager.currState.won = false;
+    gameManager.currState.dayWon = 0;
+  }
+  updateObjectiveUI();
 }
+
+function changeMoney(change: number) {
+  gameManager.currState.money += change;
+  moneyDisplay.innerHTML = `💵 ${gameManager.currState.money}`;
+  updateObjective();
+}
+
+// Create shop
+fishTypes.forEach((fishType) => {
+  const costDisplay = createHeading({
+    text: `💵 ${fishType.cost}`,
+    div: shopDiv,
+    size: "h5",
+  });
+  createButton({
+    text: `Buy ${fishType.typeName} Fish`,
+    div: shopDiv,
+    onClick: () => {
+      if (gameManager.currState.money >= fishType.cost) {
+        changeMoney(-fishType.cost);
+        const currentCell = gameManager.grid
+          .cells[gameManager.player.coords.row][
+            gameManager.player.coords.col
+          ];
+        addFish(currentCell, fishType, 1);
+        currentCell.updateInfoUI();
+        gameManager.autoSave(); // Autosave when fish is bought
+      }
+    },
+  }).append(costDisplay);
+});
 
 function draw() {
   if (ctx) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    drawGrid(ctx);
-    drawPlayer(ctx);
+    gameManager.grid.draw(ctx);
+    gameManager.player.draw(ctx);
     requestAnimationFrame(draw);
   }
 }
+draw();
 
 if (localStorage.getItem("FishFarm_AutoSave")) {
   if (confirm("Do you want to load the autosave?")) {
-    loadGame("AutoSave"); // Load the autosave
+    gameManager.loadFromSlot("AutoSave"); // Load the autosave
   } else {
     // Optional: Allow user to start fresh but keep the existing AutoSave
     alert(
@@ -537,27 +749,12 @@ if (localStorage.getItem("FishFarm_AutoSave")) {
   }
 } else {
   alert("No autosave found. Starting a new game.");
-  generateSeed();
-  autoSave(); // Create the first autosave
-}
-
-updateCellInfo(grid[playerCoordinates.row][playerCoordinates.col]);
-draw();
-
-function nextDay() {
-  regenerateFood();
-  updateFishGrowth();
-  updateFishReproduction();
-  updateSunlight();
-  updateCellInfo(grid[playerCoordinates.row][playerCoordinates.col]);
-  day++;
-  dayDisplay.innerHTML = `Day ${day}`;
-  autoSave(); // Autosave at the end of each day
+  gameManager.saveToSlot("AutoSave"); // Create the first autosave
 }
 
 document.addEventListener("keydown", (event) => {
   if (event.code === "Space") {
-    nextDay();
+    gameManager.nextDay();
   }
 });
 
@@ -565,50 +762,23 @@ function sellFish(cell: Cell, fish: Fish) {
   changeMoney(fish.value);
   const fishIndex = cell.population.indexOf(fish);
   cell.population.splice(fishIndex, 1);
-  updateCellInfo(cell);
-  autoSave(); // Autosave when fish is sold
+  cell.updateInfoUI();
+  gameManager.autoSave(); // Autosave when fish is sold
 }
 
-function fillPopup(cell: Cell) {
-  popup.innerHTML = "";
-  if (cell.population.length > 0) {
-    cell.population.forEach((fish) => {
-      createHeading({
-        text: fishToString(fish),
-        div: popup,
-        size: "h5",
-      });
-      createButton({
-        text: "Sell",
-        div: popup,
-        onClick: () => {
-          sellFish(cell, fish);
-        },
-      });
-    });
-  } else {
-    createHeading({
-      text: "No fish in this cell.",
-      div: popup,
-      size: "h5",
-    });
-  }
-}
-
-let clickedCell: Cell = grid[0][0];
+let clickedCell: Cell = gameManager.grid.cells[0][0];
 canvas.addEventListener("click", (event) => {
   const rect = canvas.getBoundingClientRect();
   const mouseX = event.x - rect.left;
   const mouseY = event.y - rect.top;
 
-  const clickedCol = Math.floor(mouseX / cellSize);
-  const clickedRow = Math.floor(mouseY / cellSize);
+  const clickedCol = Math.floor(mouseX / CELL_SIZE);
+  const clickedRow = Math.floor(mouseY / CELL_SIZE);
 
-  clickedCell = grid[clickedRow][clickedCol];
-  movePlayer(clickedRow, clickedCol);
-  updateCellInfo(clickedCell);
-
-  fillPopup(clickedCell);
+  clickedCell = gameManager.grid.cells[clickedRow][clickedCol];
+  gameManager.player.move(clickedRow, clickedCol);
+  clickedCell.updateInfoUI();
+  clickedCell.updatePopupUI();
 
   popup.style.left = `${event.x + 10}px`;
   popup.style.top = `${event.y + 10}px`;
@@ -623,7 +793,7 @@ document.addEventListener("click", (event) => {
   ) {
     popup.style.display = "none";
   } else { // Otherwise, update the popup to reflect current state
-    fillPopup(clickedCell);
+    clickedCell.updatePopupUI();
   }
 });
 
@@ -641,13 +811,7 @@ createButton({
   text: "↩️", // Undo
   div: buttonContainer,
   onClick: () => {
-    if (gameStates.length > 1) {
-      const prevState = gameStates.pop();
-      redoStates.push(prevState!);
-      const newState = gameStates.pop();
-      restoreGameState(newState!);
-      autoSave();
-    }
+    gameManager.undo();
   },
 });
 
@@ -655,11 +819,7 @@ createButton({
   text: "↪️", // Redo
   div: buttonContainer,
   onClick: () => {
-    if (redoStates.length > 0) {
-      const newState = redoStates.pop();
-      restoreGameState(newState!);
-      autoSave();
-    }
+    gameManager.redo();
   },
 });
 
@@ -667,8 +827,8 @@ createButton({
   text: "Save Game",
   div: buttonContainer, // Append to the button container
   onClick: () => {
-    const slot = prompt("Enter save slot name (e.g., Slot1):");
-    if (slot) saveGame(slot);
+    const slot = prompt("Enter save slot name to save to (e.g., Slot1):");
+    if (slot) gameManager.saveToSlot(slot);
   },
 });
 
@@ -676,111 +836,22 @@ createButton({
   text: "Load Game",
   div: buttonContainer, // Append to the button container
   onClick: () => {
-    const slot = prompt("Enter save slot name to load (e.g., Slot1):");
-    if (slot) loadGame(slot);
+    const slot = prompt("Enter save slot name to load from (e.g., Slot1):");
+    if (slot) gameManager.loadFromSlot(slot);
   },
 });
 
 createButton({
   text: "List Save Slots",
   div: buttonContainer, // Append to the button container
-  onClick: listSaveSlots,
+  onClick: gameManager.displaySaveSlots,
 });
 
 createButton({
   text: "Delete Save Slot",
   div: buttonContainer, // Append to the button container
-  onClick: deleteSaveSlot,
+  onClick: () => {
+    const slot = prompt("Enter save slot name to delete (e.g., Slot1):");
+    if (slot) gameManager.deleteSlot(slot);
+  },
 });
-
-function getGameState(): GameState {
-  encodeGridState(); // Encode the current grid state before returning a representation of the game state
-  return {
-    seed: seed,
-    day: day,
-    money: money,
-    objectiveReached: objectiveReached,
-    dayReached: dayReached,
-    gridState: Array.from(gridStateView), // Convert byte array to a regular array
-  };
-}
-
-function addGameState() {
-  const gameState = getGameState();
-  gameStates.push(gameState);
-}
-
-function autoSave() {
-  addGameState();
-  saveGame("AutoSave");
-}
-
-function saveGame(slot: string) {
-  // Save array of stringified game states to local storage rather than a single game state
-  localStorage.setItem(`FishFarm_${slot}`, JSON.stringify(gameStates));
-  if (slot === "AutoSave") return;
-  alert(`Game saved to slot "${slot}".`);
-}
-
-function updateGameUI() {
-  dayDisplay.innerHTML = `Day ${day}`;
-  moneyDisplay.innerHTML = `💵 ${money}`;
-  updateCellInfo(grid[playerCoordinates.row][playerCoordinates.col]);
-}
-
-function restoreGameState(savedState: GameState) {
-  seed = savedState.seed;
-  day = savedState.day;
-  money = savedState.money;
-  objectiveReached = savedState.objectiveReached;
-  dayReached = savedState.dayReached;
-  gridStateView.set(savedState.gridState); // Restore the byte array
-  decodeGridState(); // Rebuild the grid
-  updateObjective();
-  updateGameUI();
-}
-
-function loadGame(slot: string) {
-  const savedData = localStorage.getItem(`FishFarm_${slot}`);
-  if (!savedData) {
-    alert(`No save data found for slot "${slot}".`);
-    return;
-  }
-
-  const savedStates = JSON.parse(savedData);
-  gameStates = savedStates.map((state: GameState) => ({
-    seed: state.seed,
-    day: state.day,
-    money: state.money,
-    objectiveReached: state.objectiveReached,
-    dayReached: state.dayReached,
-    gridState: state.gridState,
-  }));
-  const currState = gameStates[gameStates.length - 1];
-  restoreGameState(currState);
-
-  alert(`Game loaded from slot "${slot}".`);
-}
-
-function listSaveSlots() {
-  const slots = Object.keys(localStorage).filter((key) =>
-    key.startsWith("FishFarm_")
-  );
-  alert(
-    `Available save slots:\n${
-      slots.map((slot) => slot.replace("FishFarm_", "")).join(", ")
-    }`,
-  );
-}
-
-function deleteSaveSlot() {
-  const slot = prompt("Enter save slot to delete (e.g., Slot1):");
-  if (!slot) return;
-  const savedData = localStorage.getItem(`FishFarm_${slot}`);
-  if (savedData) {
-    localStorage.removeItem(`FishFarm_${slot}`);
-    alert(`Save slot "${slot}" deleted.`);
-  } else {
-    alert(`No save data found for slot "${slot}".`);
-  }
-}
