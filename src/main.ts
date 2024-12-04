@@ -494,7 +494,7 @@ class GameManager {
     alert(`Game saved to slot "${slot}".`);
   }
 
-  autoSave() {
+  autoSave(clearRedos: boolean) {
     this.grid.encode(); // Encode the current grid state before returning a representation of the game state
     const gameState = {
       day: this.currState.day,
@@ -505,8 +505,9 @@ class GameManager {
     };
     this.currSave.gameStates.push(gameState);
     this.saveToSlot("AutoSave");
-    console.log("autosaved");
-    console.log(this.currSave);
+    if (clearRedos) {
+      this.redoStates = [];
+    }
   }
 
   loadFromSlot(slot: string) {
@@ -547,7 +548,7 @@ class GameManager {
       this.redoStates.push(prevState!);
       const newState = this.currSave.gameStates.pop();
       this.restoreGameState(newState!);
-      this.autoSave();
+      this.autoSave(false);
     }
   }
 
@@ -555,7 +556,7 @@ class GameManager {
     if (this.redoStates.length > 0) {
       const newState = this.redoStates.pop();
       this.restoreGameState(newState!);
-      this.autoSave();
+      this.autoSave(false);
     }
   }
 
@@ -571,7 +572,7 @@ class GameManager {
     );
     this.currState.day++;
     dayDisplay.innerHTML = `Day ${this.currState.day}`;
-    this.autoSave(); // Autosave at the end of each day
+    this.autoSave(true); // Autosave at the end of each day
   }
 
   updateGameUI() {
@@ -722,7 +723,7 @@ fishTypes.forEach((fishType) => {
           ];
         addFish(currentCell, fishType, 1);
         currentCell.updateInfoUI();
-        gameManager.autoSave(); // Autosave when fish is bought
+        gameManager.autoSave(true); // Autosave when fish is bought
       }
     },
   }).append(costDisplay);
@@ -763,7 +764,7 @@ function sellFish(cell: Cell, fish: Fish) {
   const fishIndex = cell.population.indexOf(fish);
   cell.population.splice(fishIndex, 1);
   cell.updateInfoUI();
-  gameManager.autoSave(); // Autosave when fish is sold
+  gameManager.autoSave(true); // Autosave when fish is sold
 }
 
 let clickedCell: Cell = gameManager.grid.cells[0][0];
