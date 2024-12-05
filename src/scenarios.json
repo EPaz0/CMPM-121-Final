@@ -1,0 +1,84 @@
+{
+  "tutorial": {
+    "grid_size": [
+      2,
+      3
+    ],
+    "species": [
+      "green"
+    ],
+    "goal": [
+      [
+        "money",
+        250
+      ]
+    ]
+  },
+  "level1": {
+    "grid_size": [
+      3,
+      4
+    ],
+    "species": [
+      "green",
+      "yellow"
+    ],
+    "goal": [
+      [
+        "money",
+        1000
+      ]
+    ],
+    "special_events": [
+      [
+        5,
+        "heatwave",
+        4
+      ],
+      [
+        12,
+        "baby_boom",
+        3
+      ]
+    ]
+  },
+  "level2": {
+    "grid_size": [
+      4,
+      5
+    ],
+    "species": [
+      "green",
+      "yellow",
+      "red"
+    ],
+    "goal": [
+      [
+        "money",
+        1000
+      ]
+    ],
+    "special_events": [
+      [
+        3,
+        "storm",
+        4
+      ],
+      [
+        8,
+        "heatwave",
+        3
+      ],
+      [
+        15,
+        "parasite_outbreak",
+        4
+      ],
+      [
+        24,
+        "baby_boom",
+        3
+      ]
+    ]
+  }
+}

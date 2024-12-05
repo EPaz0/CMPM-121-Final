@@ -1,8 +1,15 @@
 {
   "version": "4",
   "specifiers": {
+    "jsr:@std/yaml@^1.0.5": "1.0.5",
+    "npm:js-yaml@^4.1.0": "4.1.0",
     "npm:murmur-32@1": "1.0.0",
     "npm:vite@*": "5.4.8"
+  },
+  "jsr": {
+    "@std/yaml@1.0.5": {
+      "integrity": "71ba3d334305ee2149391931508b2c293a8490f94a337eef3a09cade1a2a2742"
+    }
   },
   "npm": {
     "@esbuild/aix-ppc64@0.21.5": {
@@ -125,6 +132,9 @@
     "@types/estree@1.0.6": {
       "integrity": "sha512-AYnb1nQyY49te+VRAVgmzfcgjYS91mY5P0TKUDCLEM+gNnA+3T6rWITXRLYCpahpqSQbN5cE+gHpnPyXjHWxcw=="
     },
+    "argparse@2.0.1": {
+      "integrity": "sha512-8+9WqebbFzpX9OR+Wa6O29asIogeRMzcGtAINdpMHHyAg10f05aSFVBbcEqGf/PXw1EjAZ+q2/bEBg3DvurK3Q=="
+    },
     "encode-utf8@2.0.0": {
       "integrity": "sha512-3EyMFxZj1/7oMotElDQUEQcP7N4TIe1aJ0m1uBDoyQ8I2LBHhBsXx8P3KsPbqNlGzG+NYxFwEauUwMPHZg3YDQ=="
     },
@@ -161,6 +171,12 @@
     },
     "fsevents@2.3.3": {
       "integrity": "sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw=="
+    },
+    "js-yaml@4.1.0": {
+      "integrity": "sha512-wpxZs9NoxZaJESJGIZTyDEaYpl0FKSA+FB9aJiyemKhMwkxQg63h4T1KJgUGHpTqPDNRcmmYLugrRjJlBtWvRA==",
+      "dependencies": [
+        "argparse"
+      ]
     },
     "murmur-32@1.0.0": {
       "integrity": "sha512-l6QKUGWXzZWHash7lmZzycpIifOrnc3PeMaoFrMv90c+xqOyOSzJU0q2T/1d15MzAdEWTpCh1paC855APqt1Gw==",
@@ -221,7 +237,15 @@
   },
   "workspace": {
     "dependencies": [
+      "jsr:@std/yaml@^1.0.5",
+      "npm:js-yaml@^4.1.0",
       "npm:murmur-32@1"
-    ]
+    ],
+    "packageJson": {
+      "dependencies": [
+        "npm:js-yaml@^4.1.0",
+        "npm:murmur-32@1"
+      ]
+    }
   }
 }

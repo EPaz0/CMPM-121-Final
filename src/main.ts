@@ -1,7 +1,5 @@
 import "./style.css";
 import luck from "./luck.ts";
-
-// Import useful functions
 import { createButton, createHeading } from "./utils.ts";
 
 const canvas = document.getElementById("gameCanvas") as HTMLCanvasElement;
@@ -146,7 +144,7 @@ class Cell {
     const randChange =
       luck([this.x, this.y, day, seed, "randchange"].toString()) < 0.5 ? -1 : 1;
     const change = luck([this.x, this.y, day, seed, "realchange"].toString()) <
-        SUNLIGHT_CHANGE_CHANCE
+      SUNLIGHT_CHANGE_CHANCE
       ? 0
       : randChange;
     // Ensure sunlight is between 1 and maximum
@@ -187,11 +185,11 @@ class Cell {
         for (let i = 0; i < fish.growth - prevFishGrowth; i++) {
           fish.value += Math.floor(
             luck(
-                  [this.food, this.population.length, day, i, seed, "value"]
-                    .toString(),
-                ) *
-                (fish.type.maxValueGain - fish.type.minValueGain + 1) +
-              fish.type.minValueGain,
+              [this.food, this.population.length, day, i, seed, "value"]
+                .toString(),
+            ) *
+            (fish.type.maxValueGain - fish.type.minValueGain + 1) +
+            fish.type.minValueGain,
           );
         }
       } else {
@@ -217,9 +215,9 @@ class Cell {
         for (let j = 0; j < pairs[i]; j++) {
           if (
             luck(
-                [this.x, this.y, i, j, day, seed, "reproduction"].toString(),
-              ) <
-              REPRODUCTION_CHANCE &&
+              [this.x, this.y, i, j, day, seed, "reproduction"].toString(),
+            ) <
+            REPRODUCTION_CHANCE &&
             this.population.length < CELL_MAX_CAPACITY
           ) {
             addFish(this, fishTypes[i], 1); // 50% chance of adding one fish per pair
@@ -335,8 +333,8 @@ class Grid {
             this.state[index++] = fish.type.typeName === "Green"
               ? 0
               : fish.type.typeName === "Yellow"
-              ? 1
-              : 2;
+                ? 1
+                : 2;
             this.state[index++] = fish.growth;
             this.state[index++] = fish.food;
             this.state[index++] = fish.value;
@@ -536,8 +534,7 @@ class GameManager {
       key.startsWith("FishFarm_")
     );
     alert(
-      `Available save slots:\n${
-        slots.map((slot) => slot.replace("FishFarm_", "")).join(", ")
+      `Available save slots:\n${slots.map((slot) => slot.replace("FishFarm_", "")).join(", ")
       }`,
     );
   }
@@ -719,8 +716,8 @@ fishTypes.forEach((fishType) => {
         changeMoney(-fishType.cost);
         const currentCell = gameManager.grid
           .cells[gameManager.player.coords.row][
-            gameManager.player.coords.col
-          ];
+          gameManager.player.coords.col
+        ];
         addFish(currentCell, fishType, 1);
         currentCell.updateInfoUI();
         gameManager.autoSave(true); // Autosave when fish is bought

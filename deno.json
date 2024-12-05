@@ -1,6 +1,6 @@
 {
   "tasks": {
-    "dev": "deno run -A --node-modules-dir npm:vite",
+    "dev": "node src/convert-yaml.js && deno run -A --node-modules-dir npm:vite",
     "build": "deno run -A --node-modules-dir npm:vite build",
     "preview": "deno run -A --node-modules-dir npm:vite preview",
     "serve": "deno run --allow-net --allow-read https://deno.land/std@0.157.0/http/file_server.ts dist/",
@@ -10,6 +10,8 @@
     "lib": ["es2015", "dom"]
   },
   "imports": {
+    "@std/yaml": "jsr:@std/yaml@^1.0.5",
+    "js-yaml": "npm:js-yaml@^4.1.0",
     "murmur-32": "npm:murmur-32@^1.0.0"
   }
 }

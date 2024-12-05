@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "js-yaml": "^4.1.0",
+    "murmur-32": "^1.0.0"
+  }
+}
