@@ -1,6 +1,7 @@
 import "./style.css";
 import luck from "./luck.ts";
 import { createButton, createHeading } from "./utils.ts";
+import { setLanguage, getText } from "./i18nHelper.ts";
 
 const canvas = document.getElementById("gameCanvas") as HTMLCanvasElement;
 const ctx = canvas.getContext("2d");
@@ -230,18 +231,19 @@ class Cell {
   updateInfoUI() {
     const cellInfoDiv = document.getElementById("cell-info");
     if (cellInfoDiv) {
-      cellInfoDiv.innerText =
-        `Cell (${gameManager.player.coords.row}, ${gameManager.player.coords.col})
-    ☀️ Sunlight: ${this.sunlight}
-    🍎 Food: ${this.food}
-    🐟 Fish: ${this.population.length}`;
-      if (this.population.length > 0) {
-        this.population.forEach((fish) => {
-          cellInfoDiv.innerText += fishToString(fish);
-        });
-      }
+        cellInfoDiv.innerText = `${getText("cell")} (${gameManager.player.coords.row}, ${gameManager.player.coords.col})
+    ${getText("sunlight")}: ${this.sunlight}
+    ${getText("food")}: ${this.food}
+    ${getText("fish")}: ${this.population.length}`;
+
+        // If the cell has a population, append text about its fish
+        if (this.population.length > 0) {
+            this.population.forEach((fish) => {
+                cellInfoDiv.innerText += fishToString(fish); // `fishToString` might also need localization later
+            });
+        }
     }
-  }
+}
 
   updatePopupUI() {
     popup.innerHTML = "";
@@ -380,6 +382,11 @@ class Grid {
   }
 }
 
+
+
+
+
+
 interface GameState {
   day: number;
   money: number;
@@ -454,6 +461,10 @@ class GameManager {
       handleKeyboardMovement(this, e);
     });
   }
+
+  
+
+  
 
   restoreGameState(gameState: GameState) {
     this.currState.day = gameState.day;
@@ -581,6 +592,8 @@ class GameManager {
   }
 }
 
+
+
 function handleKeyboardMovement(
   gameManager: GameManager,
   event: KeyboardEvent,
@@ -625,6 +638,9 @@ function handleKeyboardMovement(
 
 const gameManager = new GameManager();
 
+
+createLanguageDropdown(); // Set up language options
+updateHeader();
 // Game title heading
 createHeading({
   text: "Fish Farm",
@@ -670,10 +686,10 @@ moneyDisplay.style.display = "inline";
 
 function updateObjectiveUI() {
   if (gameManager.currState.won) {
-    objectiveDisplay.innerHTML =
-      `<strike>Make 💵 ${OBJECTIVE_MONEY}</strike> You won in ${gameManager.currState.dayWon} days!`;
+    objectiveDisplay.innerHTML = `<strike>${getText("objectiveText", { amount: OBJECTIVE_MONEY })}</strike> 
+      ${getText("wonText", { days: gameManager.currState.dayWon })}`;
   } else {
-    objectiveDisplay.innerHTML = `Make 💵 ${OBJECTIVE_MONEY}`;
+    objectiveDisplay.innerHTML = getText("objectiveText", { amount: OBJECTIVE_MONEY });
   }
 }
 
@@ -853,3 +869,120 @@ createButton({
     if (slot) gameManager.deleteSlot(slot);
   },
 });
+
+
+
+function createLanguageDropdown() {
+  const dropdown = document.createElement("select");
+
+  // Add language options
+  const languages = [
+    { code: "en", label: "English" },
+    { code: "es", label: "Español" },
+    { code: "ar", label: "العربية" },
+  ];
+
+  languages.forEach((lang) => {
+    const option = document.createElement("option");
+    option.value = lang.code; // The language code
+    option.textContent = lang.label; // The display label
+    dropdown.appendChild(option);
+  });
+
+  // Restore selected language from localStorage or default to English
+  const savedLanguage = localStorage.getItem("language") || "en";
+  dropdown.value = savedLanguage; // Set the dropdown's initial value to saved or default language
+  document.body.style.direction = savedLanguage === "ar" ? "rtl" : "ltr";
+
+  // Add an event listener for language changes
+  dropdown.addEventListener("change", (event) => {
+    const selectedCode = (event.target as HTMLSelectElement).value;
+    setLanguage(selectedCode); // Update the current language
+    localStorage.setItem("language", selectedCode); // Remember the choice in localStorage
+    // Update the localized UI (e.g., just the title for now)
+    updateHeader(); // Directly update affected UI elements
+  });
+  
+
+  // Add the dropdown to the page (e.g., as the first element in the body)
+  document.body.prepend(dropdown);
+}
+
+function updateHeader() {
+  const headerDiv = document.querySelector<HTMLDivElement>("#header")!;
+  const shopDiv = document.querySelector<HTMLDivElement>("#shop")!;
+  const objectivesDiv = document.querySelector<HTMLDivElement>("#objectives")!;
+
+  // Clear existing content in the header sections
+  headerDiv.innerHTML = "";
+  objectivesDiv.innerHTML = "";
+
+  // Update the game's main title
+  createHeading({
+    text: getText("title"), // Localized "Fish Farm"
+    div: headerDiv,
+    size: "h1",
+  });
+
+  // Update the Objective/Day displays
+  createHeading({
+    text: getText("objective"), // Localized "Objective"
+    div: objectivesDiv,
+    size: "h2",
+  });
+
+  const objectiveDisplay = createHeading({
+    text: getText("objectiveText", { amount: OBJECTIVE_MONEY }), // Localized "Make 💵 X"
+    div: objectivesDiv,
+    size: "h4",
+  });
+
+  const dayDisplay = createHeading({
+    text: `${getText("day")} ${gameManager.currState.day}`, // Localized "Day X"
+    div: headerDiv,
+    size: "h3",
+  });
+  dayDisplay.style.display = "inline";
+  dayDisplay.style.marginRight = "20px";
+
+  // Add the "Next Day" button
+  createButton({
+    text: getText("nextDay"), // Localized "Next Day"
+    div: headerDiv,
+    onClick: () => {
+      gameManager.nextDay();
+    },
+  });
+
+  // (NEW) Dynamically re-create the shop UI
+  createShop(shopDiv);
+}
+
+function createShop(shopDiv: HTMLDivElement) {
+  // Clear the shop div
+  shopDiv.innerHTML = "";
+
+  // Dynamically add fish options to the shop
+  fishTypes.forEach((fishType) => {
+    const costDisplay = createHeading({
+      text: `💵 ${fishType.cost}`, // Localized cost display if needed later
+      div: shopDiv,
+      size: "h5",
+    });
+
+    createButton({
+      text: `${getText("buy")} ${getText(fishType.typeName)} ${getText("fish")}`, // Localized "Buy Green Fish"
+      div: shopDiv,
+      onClick: () => {
+        if (gameManager.currState.money >= fishType.cost) {
+          changeMoney(-fishType.cost); // Deduct money
+          const currentCell = gameManager.grid.cells[gameManager.player.coords.row][gameManager.player.coords.col];
+          addFish(currentCell, fishType, 1); // Add fish to the player's current cell
+          currentCell.updateInfoUI(); // Update cell info
+          gameManager.autoSave(true); // Autosave the game
+        }
+      },
+    }).append(costDisplay);
+  });
+}
+
