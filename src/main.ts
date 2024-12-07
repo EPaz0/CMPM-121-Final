@@ -79,7 +79,7 @@ const fishTypes: FishType[] = [
 ];
 
 function fishToString(fish: Fish) {
-  return `\n${fish.type.typeName} Fish | Growth: ${fish.growth}/${FISH_MAX_GROWTH}, Food: ${fish.food}/${FISH_MAX_FOOD}, Value: ${fish.value}`;
+  return `\n${getText(fish.type.typeName)} ${getText("fish")} | ${getText("growth")}: ${fish.growth}/${FISH_MAX_GROWTH}, ${getText("food")}: ${fish.food}/${FISH_MAX_FOOD}, ${getText("value")}: ${fish.value}`;
 }
 
 function addFish(cell: Cell, type: FishType, num: number) {
@@ -231,31 +231,35 @@ class Cell {
   updateInfoUI() {
     const cellInfoDiv = document.getElementById("cell-info");
     if (cellInfoDiv) {
-        cellInfoDiv.innerText = `${getText("cell")} (${gameManager.player.coords.row}, ${gameManager.player.coords.col})
-    ${getText("sunlight")}: ${this.sunlight}
-    ${getText("food")}: ${this.food}
-    ${getText("fish")}: ${this.population.length}`;
-
-        // If the cell has a population, append text about its fish
-        if (this.population.length > 0) {
-            this.population.forEach((fish) => {
-                cellInfoDiv.innerText += fishToString(fish); // `fishToString` might also need localization later
-            });
-        }
+      // Display the localized info for the current cell
+      cellInfoDiv.innerText = `${getText("cell")} (${gameManager.player.coords.row}, ${gameManager.player.coords.col})
+      ${getText("sunlight")}: ${this.sunlight}
+      ${getText("food")}: ${this.food}
+      ${getText("fish")}: ${this.population.length}`;
+  
+      // If the cell has a population, append localized details about its fish
+      if (this.population.length > 0) {
+        this.population.forEach((fish) => {
+          const localizedFish = `${getText(fish.type.typeName)} ${getText("fish")} | ${getText("growth")}: ${fish.growth}/${FISH_MAX_GROWTH}, ${getText("food")}: ${fish.food}/${FISH_MAX_FOOD}, ${getText("value")}: ${fish.value}`;
+          cellInfoDiv.innerText += `\n${localizedFish}`;
+        });
+      }
     }
-}
+  }
 
   updatePopupUI() {
     popup.innerHTML = "";
+  
     if (this.population.length > 0) {
       this.population.forEach((fish) => {
         createHeading({
-          text: fishToString(fish),
+          text: fishToString(fish), // Add localization to fishToString separately if necessary
           div: popup,
           size: "h5",
         });
+  
         createButton({
-          text: "Sell",
+          text: getText("sell"), // Localized "Sell" button
           div: popup,
           onClick: () => {
             sellFish(this, fish);
@@ -264,7 +268,7 @@ class Cell {
       });
     } else {
       createHeading({
-        text: "No fish in this cell.",
+        text: getText("noFishInCell"), // Localized "No fish in this cell" message
         div: popup,
         size: "h5",
       });
@@ -381,10 +385,6 @@ class Grid {
     }
   }
 }
-
-
-
-
 
 
 interface GameState {
@@ -522,21 +522,21 @@ class GameManager {
   loadFromSlot(slot: string) {
     const rawData = localStorage.getItem(`FishFarm_${slot}`);
     if (!rawData) {
-      alert(`No save data found for slot "${slot}".`);
+      alert(getText("noSaveData", { slot })); // Localized error message
       return;
     }
     const saveData = JSON.parse(rawData);
     this.restoreGameSave(saveData);
-    alert(`Game loaded from slot "${slot}".`);
+    alert(getText("gameLoaded", { slot })); // Localized success message
   }
 
   deleteSlot(slot: string) {
     const savedData = localStorage.getItem(`FishFarm_${slot}`);
     if (savedData) {
       localStorage.removeItem(`FishFarm_${slot}`);
-      alert(`Save slot "${slot}" deleted.`);
+      alert(getText("slotDeleted", { slot })); // Localized success message
     } else {
-      alert(`No save data found for slot "${slot}".`);
+      alert(getText("noSaveData", { slot })); // Localized error message
     }
   }
 
@@ -544,10 +544,8 @@ class GameManager {
     const slots = Object.keys(localStorage).filter((key) =>
       key.startsWith("FishFarm_")
     );
-    alert(
-      `Available save slots:\n${slots.map((slot) => slot.replace("FishFarm_", "")).join(", ")
-      }`,
-    );
+    const availableSlots = slots.map((slot) => slot.replace("FishFarm_", "")).join(", ");
+    alert(getText("availableSlots", { slots: availableSlots })); // Localized listing of save slots
   }
 
   undo() {
@@ -642,11 +640,11 @@ const gameManager = new GameManager();
 createLanguageDropdown(); // Set up language options
 updateHeader();
 // Game title heading
-createHeading({
+/*createHeading({
   text: "Fish Farm",
   div: headerDiv,
   size: "h1",
-});
+});*/
 
 createHeading({
   text: "Shop",
@@ -683,6 +681,8 @@ const moneyDisplay = createHeading({
   size: "h2",
 });
 moneyDisplay.style.display = "inline";
+
+updateHeader(); 
 
 function updateObjectiveUI() {
   if (gameManager.currState.won) {
@@ -838,37 +838,39 @@ createButton({
 });
 
 createButton({
-  text: "Save Game",
-  div: buttonContainer, // Append to the button container
+  text: getText("saveGame"), // Localized on initial creation
+  div: buttonContainer,
   onClick: () => {
-    const slot = prompt("Enter save slot name to save to (e.g., Slot1):");
+    const slot = prompt(getText("savePrompt"));
     if (slot) gameManager.saveToSlot(slot);
   },
-});
+}).setAttribute("data-button", "saveGame"); // Add "saveGame" identifier
 
 createButton({
-  text: "Load Game",
-  div: buttonContainer, // Append to the button container
+  text: getText("loadGame"), // Localized on initial creation
+  div: buttonContainer,
   onClick: () => {
-    const slot = prompt("Enter save slot name to load from (e.g., Slot1):");
+    const slot = prompt(getText("loadPrompt"));
     if (slot) gameManager.loadFromSlot(slot);
   },
-});
+}).setAttribute("data-button", "loadGame"); // Add "loadGame" identifier
 
 createButton({
-  text: "List Save Slots",
-  div: buttonContainer, // Append to the button container
-  onClick: gameManager.displaySaveSlots,
-});
-
-createButton({
-  text: "Delete Save Slot",
-  div: buttonContainer, // Append to the button container
+  text: getText("listSaveSlots"), // Localized on initial creation
+  div: buttonContainer,
   onClick: () => {
-    const slot = prompt("Enter save slot name to delete (e.g., Slot1):");
+    gameManager.displaySaveSlots();
+  },
+}).setAttribute("data-button", "listSaveSlots"); // Add "listSaveSlots" identifier
+
+createButton({
+  text: getText("deleteSaveSlot"), // Localized on initial creation
+  div: buttonContainer,
+  onClick: () => {
+    const slot = prompt(getText("deletePrompt"));
     if (slot) gameManager.deleteSlot(slot);
   },
-});
+}).setAttribute("data-button", "deleteSaveSlot"); // Add "deleteSaveSlot" identifier
 
 
 
@@ -901,6 +903,7 @@ function createLanguageDropdown() {
     localStorage.setItem("language", selectedCode); // Remember the choice in localStorage
     // Update the localized UI (e.g., just the title for now)
     updateHeader(); // Directly update affected UI elements
+    updateButtonsText(buttonContainer); // Update the text for the buttons
   });
   
 
@@ -924,6 +927,7 @@ function updateHeader() {
     size: "h1",
   });
 
+  
   // Update the Objective/Day displays
   createHeading({
     text: getText("objective"), // Localized "Objective"
@@ -931,7 +935,7 @@ function updateHeader() {
     size: "h2",
   });
 
-  const objectiveDisplay = createHeading({
+  const _objectiveDisplay = createHeading({
     text: getText("objectiveText", { amount: OBJECTIVE_MONEY }), // Localized "Make 💵 X"
     div: objectivesDiv,
     size: "h4",
@@ -954,13 +958,25 @@ function updateHeader() {
     },
   });
 
-  // (NEW) Dynamically re-create the shop UI
+  const moneyDisplay = createHeading({
+    text: `💵 ${gameManager.currState.money}`,
+    div: headerDiv,
+    size: "h2",
+  });
+  moneyDisplay.style.display = "inline";
+
   createShop(shopDiv);
 }
 
 function createShop(shopDiv: HTMLDivElement) {
   // Clear the shop div
   shopDiv.innerHTML = "";
+
+  createHeading({
+    text: getText("shop"), // Localized "Shop"
+    div: shopDiv,
+    size: "h2",
+  });
 
   // Dynamically add fish options to the shop
   fishTypes.forEach((fishType) => {
@@ -984,5 +1000,32 @@ function createShop(shopDiv: HTMLDivElement) {
       },
     }).append(costDisplay);
   });
+}
+
+
+function updateButtonsText(buttonsContainer: HTMLElement) {
+  // Update the text for the "Save Game" button
+  const saveGameButton = buttonsContainer.querySelector<HTMLButtonElement>('[data-button="saveGame"]');
+  if (saveGameButton) {
+    saveGameButton.textContent = getText("saveGame"); // Localized "Save Game"
+  }
+
+  // Update the text for the "Load Game" button
+  const loadGameButton = buttonsContainer.querySelector<HTMLButtonElement>('[data-button="loadGame"]');
+  if (loadGameButton) {
+    loadGameButton.textContent = getText("loadGame"); // Localized "Load Game"
+  }
+
+  // Update the text for the "List Save Slots" button
+  const listSaveSlotsButton = buttonsContainer.querySelector<HTMLButtonElement>('[data-button="listSaveSlots"]');
+  if (listSaveSlotsButton) {
+    listSaveSlotsButton.textContent = getText("listSaveSlots"); // Localized "List Save Slots"
+  }
+
+  // Update the text for the "Delete Save Slot" button
+  const deleteSaveSlotButton = buttonsContainer.querySelector<HTMLButtonElement>('[data-button="deleteSaveSlot"]');
+  if (deleteSaveSlotButton) {
+    deleteSaveSlotButton.textContent = getText("deleteSaveSlot"); // Localized "Delete Save Slot"
+  }
 }
 
