@@ -1,7 +1,7 @@
 import "./style.css";
 import luck from "./luck.ts";
 import { createButton, createHeading } from "./utils.ts";
-import { setLanguage, getText } from "./i18nHelper.ts";
+import { getText, setLanguage } from "./i18nHelper.ts";
 
 const canvas = document.getElementById("gameCanvas") as HTMLCanvasElement;
 const ctx = canvas.getContext("2d");
@@ -12,10 +12,6 @@ popup.style.border = "1px solid black";
 popup.style.padding = "10px";
 popup.style.display = "none";
 document.body.append(popup);
-
-const headerDiv = document.querySelector<HTMLDivElement>("#header")!;
-const shopDiv = document.querySelector<HTMLDivElement>("#shop")!;
-const objectivesDiv = document.querySelector<HTMLDivElement>("#objectives")!;
 
 // Modifiable gameplay values
 const SEEDS = 10000; // The number of random seeds there are
@@ -79,7 +75,11 @@ const fishTypes: FishType[] = [
 ];
 
 function fishToString(fish: Fish) {
-  return `\n${getText(fish.type.typeName)} ${getText("fish")} | ${getText("growth")}: ${fish.growth}/${FISH_MAX_GROWTH}, ${getText("food")}: ${fish.food}/${FISH_MAX_FOOD}, ${getText("value")}: ${fish.value}`;
+  return `\n${getText(fish.type.typeName)} ${getText("fish")} | ${
+    getText("growth")
+  }: ${fish.growth}/${FISH_MAX_GROWTH}, ${
+    getText("food")
+  }: ${fish.food}/${FISH_MAX_FOOD}, ${getText("value")}: ${fish.value}`;
 }
 
 function addFish(cell: Cell, type: FishType, num: number) {
@@ -145,7 +145,7 @@ class Cell {
     const randChange =
       luck([this.x, this.y, day, seed, "randchange"].toString()) < 0.5 ? -1 : 1;
     const change = luck([this.x, this.y, day, seed, "realchange"].toString()) <
-      SUNLIGHT_CHANGE_CHANCE
+        SUNLIGHT_CHANGE_CHANCE
       ? 0
       : randChange;
     // Ensure sunlight is between 1 and maximum
@@ -186,11 +186,11 @@ class Cell {
         for (let i = 0; i < fish.growth - prevFishGrowth; i++) {
           fish.value += Math.floor(
             luck(
-              [this.food, this.population.length, day, i, seed, "value"]
-                .toString(),
-            ) *
-            (fish.type.maxValueGain - fish.type.minValueGain + 1) +
-            fish.type.minValueGain,
+                  [this.food, this.population.length, day, i, seed, "value"]
+                    .toString(),
+                ) *
+                (fish.type.maxValueGain - fish.type.minValueGain + 1) +
+              fish.type.minValueGain,
           );
         }
       } else {
@@ -216,9 +216,9 @@ class Cell {
         for (let j = 0; j < pairs[i]; j++) {
           if (
             luck(
-              [this.x, this.y, i, j, day, seed, "reproduction"].toString(),
-            ) <
-            REPRODUCTION_CHANCE &&
+                [this.x, this.y, i, j, day, seed, "reproduction"].toString(),
+              ) <
+              REPRODUCTION_CHANCE &&
             this.population.length < CELL_MAX_CAPACITY
           ) {
             addFish(this, fishTypes[i], 1); // 50% chance of adding one fish per pair
@@ -232,15 +232,21 @@ class Cell {
     const cellInfoDiv = document.getElementById("cell-info");
     if (cellInfoDiv) {
       // Display the localized info for the current cell
-      cellInfoDiv.innerText = `${getText("cell")} (${gameManager.player.coords.row}, ${gameManager.player.coords.col})
+      cellInfoDiv.innerText = `${
+        getText("cell")
+      } (${gameManager.player.coords.row}, ${gameManager.player.coords.col})
       ${getText("sunlight")}: ${this.sunlight}
       ${getText("food")}: ${this.food}
       ${getText("fish")}: ${this.population.length}`;
-  
+
       // If the cell has a population, append localized details about its fish
       if (this.population.length > 0) {
         this.population.forEach((fish) => {
-          const localizedFish = `${getText(fish.type.typeName)} ${getText("fish")} | ${getText("growth")}: ${fish.growth}/${FISH_MAX_GROWTH}, ${getText("food")}: ${fish.food}/${FISH_MAX_FOOD}, ${getText("value")}: ${fish.value}`;
+          const localizedFish = `${getText(fish.type.typeName)} ${
+            getText("fish")
+          } | ${getText("growth")}: ${fish.growth}/${FISH_MAX_GROWTH}, ${
+            getText("food")
+          }: ${fish.food}/${FISH_MAX_FOOD}, ${getText("value")}: ${fish.value}`;
           cellInfoDiv.innerText += `\n${localizedFish}`;
         });
       }
@@ -249,7 +255,7 @@ class Cell {
 
   updatePopupUI() {
     popup.innerHTML = "";
-  
+
     if (this.population.length > 0) {
       this.population.forEach((fish) => {
         createHeading({
@@ -257,7 +263,7 @@ class Cell {
           div: popup,
           size: "h5",
         });
-  
+
         createButton({
           text: getText("sell"), // Localized "Sell" button
           div: popup,
@@ -339,8 +345,8 @@ class Grid {
             this.state[index++] = fish.type.typeName === "Green"
               ? 0
               : fish.type.typeName === "Yellow"
-                ? 1
-                : 2;
+              ? 1
+              : 2;
             this.state[index++] = fish.growth;
             this.state[index++] = fish.food;
             this.state[index++] = fish.value;
@@ -385,7 +391,6 @@ class Grid {
     }
   }
 }
-
 
 interface GameState {
   day: number;
@@ -461,10 +466,6 @@ class GameManager {
       handleKeyboardMovement(this, e);
     });
   }
-
-  
-
-  
 
   restoreGameState(gameState: GameState) {
     this.currState.day = gameState.day;
@@ -544,7 +545,8 @@ class GameManager {
     const slots = Object.keys(localStorage).filter((key) =>
       key.startsWith("FishFarm_")
     );
-    const availableSlots = slots.map((slot) => slot.replace("FishFarm_", "")).join(", ");
+    const availableSlots = slots.map((slot) => slot.replace("FishFarm_", ""))
+      .join(", ");
     alert(getText("availableSlots", { slots: availableSlots })); // Localized listing of save slots
   }
 
@@ -577,7 +579,7 @@ class GameManager {
       })
     );
     this.currState.day++;
-    updateDayDisplay(); 
+    updateDayDisplay();
     this.autoSave(true); // Autosave at the end of each day
   }
 
@@ -589,8 +591,6 @@ class GameManager {
     currentCell.updateInfoUI();
   }
 }
-
-
 
 function handleKeyboardMovement(
   gameManager: GameManager,
@@ -636,93 +636,64 @@ function handleKeyboardMovement(
 
 const gameManager = new GameManager();
 
-
 createLanguageDropdown(); // Set up language options
 updateHeader();
-// Game title heading
-/*createHeading({
-  text: "Fish Farm",
-  div: headerDiv,
-  size: "h1",
-});*/
-
-/*createHeading({
-  text: "Shop",
-  div: shopDiv,
-  size: "h2",
-});
-
-createHeading({ text: "Objective", div: objectivesDiv, size: "h2" });
-const objectiveDisplay = createHeading({
-  text: `Make 💵 ${OBJECTIVE_MONEY}`,
-  div: objectivesDiv,
-  size: "h4",
-});*/
-
-/*const dayDisplay = createHeading({
-  text: `Day ${gameManager.currState.day}`,
-  div: headerDiv,
-  size: "h3",
-});
-dayDisplay.style.display = "inline";
-dayDisplay.style.marginRight = "20px";
-
-createButton({
-  text: "Next Day",
-  div: headerDiv,
-  onClick: () => {
-    gameManager.nextDay();
-  },
-});*/
-
-/*const moneyDisplay = createHeading({
-  text: `💵 ${gameManager.currState.money}`,
-  div: headerDiv,
-  size: "h2",
-});
-moneyDisplay.style.display = "inline";*/
-
-//updateHeader(); 
 
 function updateObjectiveUI() {
-  const objectiveDisplay = document.querySelector<HTMLHeadingElement>("#objectives h4");
+  const objectiveDisplay = document.querySelector<HTMLHeadingElement>(
+    "#objectives h4",
+  );
   if (objectiveDisplay) {
     if (gameManager.currState.won) {
       // Update the display with completed objective (localized)
-      objectiveDisplay.innerHTML = `<strike>${getText("objectiveText", {
-        amount: OBJECTIVE_MONEY,
-      })}</strike> ${getText("wonText", { days: gameManager.currState.dayWon })}`;
+      objectiveDisplay.innerHTML = `<strike>${
+        getText("objectiveText", {
+          amount: OBJECTIVE_MONEY,
+        })
+      }</strike> ${getText("wonText", { days: gameManager.currState.dayWon })}`;
     } else {
       // Update display to show the active objective
-      objectiveDisplay.textContent = getText("objectiveText", { amount: OBJECTIVE_MONEY });
+      objectiveDisplay.textContent = getText("objectiveText", {
+        amount: OBJECTIVE_MONEY,
+      });
     }
   }
 }
 
 function updateObjective() {
   // Check if the objective is reached
-  if (gameManager.currState.money >= OBJECTIVE_MONEY && !gameManager.currState.won) {
+  if (
+    gameManager.currState.money >= OBJECTIVE_MONEY && !gameManager.currState.won
+  ) {
     gameManager.currState.won = true;
     gameManager.currState.dayWon = gameManager.currState.day;
   }
 
   // Check if the objective is no longer fulfilled (e.g., money drops below requirement)
-  if (gameManager.currState.money < OBJECTIVE_MONEY && gameManager.currState.won) {
+  if (
+    gameManager.currState.money < OBJECTIVE_MONEY && gameManager.currState.won
+  ) {
     gameManager.currState.won = false;
     gameManager.currState.dayWon = 0;
   }
 
   // Dynamically update the objective display
-  const objectiveDisplay = document.querySelector<HTMLHeadingElement>("#objectives h4");
+  const objectiveDisplay = document.querySelector<HTMLHeadingElement>(
+    "#objectives h4",
+  );
   if (objectiveDisplay) {
     if (gameManager.currState.won) {
       // Show completed objective with strike-through
-      objectiveDisplay.innerHTML = `<strike>${getText("objectiveText", {
-        amount: OBJECTIVE_MONEY,
-      })}</strike> ${getText("wonText", { days: gameManager.currState.dayWon })}`;
+      objectiveDisplay.innerHTML = `<strike>${
+        getText("objectiveText", {
+          amount: OBJECTIVE_MONEY,
+        })
+      }</strike> ${getText("wonText", { days: gameManager.currState.dayWon })}`;
     } else {
       // Show current objective in progress
-      objectiveDisplay.textContent = getText("objectiveText", { amount: OBJECTIVE_MONEY });
+      objectiveDisplay.textContent = getText("objectiveText", {
+        amount: OBJECTIVE_MONEY,
+      });
     }
   }
 }
@@ -737,32 +708,6 @@ function changeMoney(change: number) {
   // Re-evaluate and update objectives
   updateObjective();
 }
-
-// Create shop
-/*fishTypes.forEach((fishType) => {
-  const costDisplay = createHeading({
-    text: `💵 ${fishType.cost}`,
-    div: shopDiv,
-    size: "h5",
-  });
-  createButton({
-    text: `Buy ${fishType.typeName} Fish`,
-    div: shopDiv,
-    onClick: () => {
-      if (gameManager.currState.money >= fishType.cost) {
-        changeMoney(-fishType.cost);
-        updateMoneyDisplay(); 
-        const currentCell = gameManager.grid
-          .cells[gameManager.player.coords.row][
-          gameManager.player.coords.col
-        ];
-        addFish(currentCell, fishType, 1);
-        currentCell.updateInfoUI();
-        gameManager.autoSave(true); // Autosave when fish is bought
-      }
-    },
-  }).append(costDisplay);
-});*/
 
 function draw() {
   if (ctx) {
@@ -894,8 +839,6 @@ createButton({
   },
 }).setAttribute("data-button", "deleteSaveSlot"); // Add "deleteSaveSlot" identifier
 
-
-
 function createLanguageDropdown() {
   const dropdown = document.createElement("select");
 
@@ -937,7 +880,6 @@ function createLanguageDropdown() {
 
 function updateHeader() {
   const headerDiv = document.querySelector<HTMLDivElement>("#header")!;
-  const shopDiv = document.querySelector<HTMLDivElement>("#shop")!;
   const objectivesDiv = document.querySelector<HTMLDivElement>("#objectives")!;
 
   // Clear existing content in the header sections
@@ -951,7 +893,6 @@ function updateHeader() {
     size: "h1",
   });
 
-  
   // Update the Objective/Day displays
   createHeading({
     text: getText("objective"), // Localized "Objective"
@@ -993,13 +934,15 @@ function updateHeader() {
 }
 
 function createShop() {
+  const shopDiv = document.querySelector<HTMLDivElement>("#shop")!;
+
   // Clear the shop div to prevent duplicates
   shopDiv.innerHTML = "";
 
   createHeading({
-  text: getText("shop"), // Localized "Shop"
-  div: shopDiv,
-  size: "h2",
+    text: getText("shop"), // Localized "Shop"
+    div: shopDiv,
+    size: "h2",
   });
 
   // Dynamically add fish buttons and costs
@@ -1011,13 +954,18 @@ function createShop() {
     });
 
     createButton({
-      text: `${getText("buy")} ${getText(fishType.typeName)} ${getText("fish")}`, // Use translated "Buy X Fish"
+      text: `${getText("buy")} ${getText(fishType.typeName)} ${
+        getText("fish")
+      }`, // Use translated "Buy X Fish"
       div: shopDiv,
       onClick: () => {
         if (gameManager.currState.money >= fishType.cost) {
           changeMoney(-fishType.cost);
           updateMoneyDisplay();
-          const currentCell = gameManager.grid.cells[gameManager.player.coords.row][gameManager.player.coords.col];
+          const currentCell = gameManager.grid
+            .cells[gameManager.player.coords.row][
+              gameManager.player.coords.col
+            ];
           addFish(currentCell, fishType, 1);
           currentCell.updateInfoUI();
           gameManager.autoSave(true); // Autosave when fish is bought
@@ -1041,32 +989,36 @@ function updateDayDisplay() {
   }
 }
 
-
-
-
 function updateButtonsText(buttonsContainer: HTMLElement) {
   // Update the text for the "Save Game" button
-  const saveGameButton = buttonsContainer.querySelector<HTMLButtonElement>('[data-button="saveGame"]');
+  const saveGameButton = buttonsContainer.querySelector<HTMLButtonElement>(
+    '[data-button="saveGame"]',
+  );
   if (saveGameButton) {
     saveGameButton.textContent = getText("saveGame"); // Localized "Save Game"
   }
 
   // Update the text for the "Load Game" button
-  const loadGameButton = buttonsContainer.querySelector<HTMLButtonElement>('[data-button="loadGame"]');
+  const loadGameButton = buttonsContainer.querySelector<HTMLButtonElement>(
+    '[data-button="loadGame"]',
+  );
   if (loadGameButton) {
     loadGameButton.textContent = getText("loadGame"); // Localized "Load Game"
   }
 
   // Update the text for the "List Save Slots" button
-  const listSaveSlotsButton = buttonsContainer.querySelector<HTMLButtonElement>('[data-button="listSaveSlots"]');
+  const listSaveSlotsButton = buttonsContainer.querySelector<HTMLButtonElement>(
+    '[data-button="listSaveSlots"]',
+  );
   if (listSaveSlotsButton) {
     listSaveSlotsButton.textContent = getText("listSaveSlots"); // Localized "List Save Slots"
   }
 
   // Update the text for the "Delete Save Slot" button
-  const deleteSaveSlotButton = buttonsContainer.querySelector<HTMLButtonElement>('[data-button="deleteSaveSlot"]');
+  const deleteSaveSlotButton = buttonsContainer.querySelector<
+    HTMLButtonElement
+  >('[data-button="deleteSaveSlot"]');
   if (deleteSaveSlotButton) {
     deleteSaveSlotButton.textContent = getText("deleteSaveSlot"); // Localized "Delete Save Slot"
   }
 }
-
