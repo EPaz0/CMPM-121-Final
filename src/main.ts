@@ -3,6 +3,22 @@ import luck from "./luck.ts";
 import { createButton, createHeading } from "./utils.ts";
 import { getText, setLanguage } from "./i18nHelper.ts";
 
+// Get scenarios from JSON file (converted from YAML file)
+import scenariosJSON from "./scenarios.json" with { type: "json" };
+// deno-lint-ignore no-explicit-any
+const scenarios: any[] = [];
+for (const key in scenariosJSON) {
+  // deno-lint-ignore no-explicit-any
+  scenarios.push((scenariosJSON as { [key: string]: any })[key]);
+}
+console.log(scenarios);
+
+// Scenario values
+let scenario = 0; // 0 = Tutorial, 1 = Level 1, etc.
+let goalMoney = 500;
+let gridSize = { rows: 4, cols: 5 };
+let species: string[] = [];
+
 const canvas = document.getElementById("gameCanvas") as HTMLCanvasElement;
 const ctx = canvas.getContext("2d");
 const popup = document.createElement("div");
@@ -16,8 +32,6 @@ document.body.append(popup);
 // Modifiable gameplay values
 const SEEDS = 10000; // The number of random seeds there are
 const STARTING_MONEY = 30;
-const OBJECTIVE_MONEY = 500;
-const GRID_SIZE = { rows: 4, cols: 5 };
 const BASE_FISH_COST = 15;
 const REPRODUCTION_CHANCE = 0.2;
 const SUNLIGHT_CHANGE_CHANCE = 0.4;
@@ -291,8 +305,8 @@ class Grid {
 
   constructor() {
     this.seed = getRandomSeed(SEEDS);
-    this.rows = GRID_SIZE.rows;
-    this.cols = GRID_SIZE.cols;
+    this.rows = gridSize.rows;
+    this.cols = gridSize.cols;
     this.cells = Array.from(
       { length: this.rows },
       (_, rowIndex) =>
@@ -433,6 +447,7 @@ class Player {
 
 interface GameSave {
   seed: number;
+  scenario: number;
   gameStates: GameState[];
 }
 
@@ -453,18 +468,30 @@ class GameManager {
     this.player = new Player();
     this.currSave = {
       seed: this.grid.seed,
+      scenario: scenario,
       gameStates: [createGameState(this.grid)],
     };
     this.currState = createGameState(this.grid);
     this.redoStates = [];
+  }
 
-    // Set up canvas based on grid size
-    canvas.width = this.grid.cols * CELL_SIZE + GRID_OFFSET;
-    canvas.height = this.grid.rows * CELL_SIZE + GRID_OFFSET;
-    // Listen for player's keyboard movement
-    document.addEventListener("keydown", (e) => {
-      handleKeyboardMovement(this, e);
-    });
+  setScenario() {
+    const newScenario = scenarios[scenario];
+    goalMoney = newScenario.goal;
+    gridSize = {
+      rows: newScenario.grid_size[0],
+      cols: newScenario.grid_size[1],
+    };
+    species = newScenario.species.slice();
+    // Rebuild grid with correct size for given scenario
+    this.grid = new Grid();
+    this.grid.setInitialCellStats();
+    this.currState = createGameState(this.grid);
+  }
+
+  nextScenario() {
+    scenario++;
+    this.setScenario();
   }
 
   restoreGameState(gameState: GameState) {
@@ -479,6 +506,9 @@ class GameManager {
   }
 
   restoreGameSave(gameSave: GameSave) {
+    scenario = gameSave.scenario;
+    this.setScenario(); // Restore the scenario
+    this.grid.seed = gameSave.seed;
     this.currSave.seed = gameSave.seed;
     this.currSave.gameStates = gameSave.gameStates.map((
       state: GameState,
@@ -635,6 +665,15 @@ function handleKeyboardMovement(
 }
 
 const gameManager = new GameManager();
+gameManager.setScenario();
+
+// Set up canvas based on grid size
+canvas.width = gameManager.grid.cols * CELL_SIZE + GRID_OFFSET;
+canvas.height = gameManager.grid.rows * CELL_SIZE + GRID_OFFSET;
+// Listen for player's keyboard movement
+document.addEventListener("keydown", (e) => {
+  handleKeyboardMovement(gameManager, e);
+});
 
 createLanguageDropdown(); // Set up language options
 updateHeader();
@@ -648,13 +687,13 @@ function updateObjectiveUI() {
       // Update the display with completed objective (localized)
       objectiveDisplay.innerHTML = `<strike>${
         getText("objectiveText", {
-          amount: OBJECTIVE_MONEY,
+          amount: goalMoney,
         })
       }</strike> ${getText("wonText", { days: gameManager.currState.dayWon })}`;
     } else {
       // Update display to show the active objective
       objectiveDisplay.textContent = getText("objectiveText", {
-        amount: OBJECTIVE_MONEY,
+        amount: goalMoney,
       });
     }
   }
@@ -663,18 +702,10 @@ function updateObjectiveUI() {
 function updateObjective() {
   // Check if the objective is reached
   if (
-    gameManager.currState.money >= OBJECTIVE_MONEY && !gameManager.currState.won
+    gameManager.currState.money >= goalMoney && !gameManager.currState.won
   ) {
     gameManager.currState.won = true;
     gameManager.currState.dayWon = gameManager.currState.day;
-  }
-
-  // Check if the objective is no longer fulfilled (e.g., money drops below requirement)
-  if (
-    gameManager.currState.money < OBJECTIVE_MONEY && gameManager.currState.won
-  ) {
-    gameManager.currState.won = false;
-    gameManager.currState.dayWon = 0;
   }
 
   // Dynamically update the objective display
@@ -686,13 +717,13 @@ function updateObjective() {
       // Show completed objective with strike-through
       objectiveDisplay.innerHTML = `<strike>${
         getText("objectiveText", {
-          amount: OBJECTIVE_MONEY,
+          amount: goalMoney,
         })
       }</strike> ${getText("wonText", { days: gameManager.currState.dayWon })}`;
     } else {
       // Show current objective in progress
       objectiveDisplay.textContent = getText("objectiveText", {
-        amount: OBJECTIVE_MONEY,
+        amount: goalMoney,
       });
     }
   }
@@ -901,7 +932,7 @@ function updateHeader() {
   });
 
   const _objectiveDisplay = createHeading({
-    text: getText("objectiveText", { amount: OBJECTIVE_MONEY }), // Localized "Make 💵 X"
+    text: getText("objectiveText", { amount: goalMoney }), // Localized "Make 💵 X"
     div: objectivesDiv,
     size: "h4",
   });

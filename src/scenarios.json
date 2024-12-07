@@ -7,12 +7,7 @@
     "species": [
       "green"
     ],
-    "goal": [
-      [
-        "money",
-        250
-      ]
-    ]
+    "goal": 250
   },
   "level1": {
     "grid_size": [
@@ -23,12 +18,7 @@
       "green",
       "yellow"
     ],
-    "goal": [
-      [
-        "money",
-        1000
-      ]
-    ],
+    "goal": 1000,
     "special_events": [
       [
         5,
@@ -52,12 +42,7 @@
       "yellow",
       "red"
     ],
-    "goal": [
-      [
-        "money",
-        1000
-      ]
-    ],
+    "goal": 1000,
     "special_events": [
       [
         3,
