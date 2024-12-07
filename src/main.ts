@@ -577,13 +577,13 @@ class GameManager {
       })
     );
     this.currState.day++;
-    dayDisplay.innerHTML = `Day ${this.currState.day}`;
+    updateDayDisplay(); 
     this.autoSave(true); // Autosave at the end of each day
   }
 
   updateGameUI() {
-    dayDisplay.innerHTML = `Day ${this.currState.day}`;
-    moneyDisplay.innerHTML = `💵 ${this.currState.money}`;
+    updateDayDisplay();
+    updateMoneyDisplay();
     const currentCell =
       this.grid.cells[this.player.coords.row][this.player.coords.col];
     currentCell.updateInfoUI();
@@ -646,7 +646,7 @@ updateHeader();
   size: "h1",
 });*/
 
-createHeading({
+/*createHeading({
   text: "Shop",
   div: shopDiv,
   size: "h2",
@@ -657,9 +657,9 @@ const objectiveDisplay = createHeading({
   text: `Make 💵 ${OBJECTIVE_MONEY}`,
   div: objectivesDiv,
   size: "h4",
-});
+});*/
 
-const dayDisplay = createHeading({
+/*const dayDisplay = createHeading({
   text: `Day ${gameManager.currState.day}`,
   div: headerDiv,
   size: "h3",
@@ -673,52 +673,73 @@ createButton({
   onClick: () => {
     gameManager.nextDay();
   },
-});
+});*/
 
-const moneyDisplay = createHeading({
+/*const moneyDisplay = createHeading({
   text: `💵 ${gameManager.currState.money}`,
   div: headerDiv,
   size: "h2",
 });
-moneyDisplay.style.display = "inline";
+moneyDisplay.style.display = "inline";*/
 
-updateHeader(); 
+//updateHeader(); 
 
 function updateObjectiveUI() {
-  if (gameManager.currState.won) {
-    objectiveDisplay.innerHTML = `<strike>${getText("objectiveText", { amount: OBJECTIVE_MONEY })}</strike> 
-      ${getText("wonText", { days: gameManager.currState.dayWon })}`;
-  } else {
-    objectiveDisplay.innerHTML = getText("objectiveText", { amount: OBJECTIVE_MONEY });
+  const objectiveDisplay = document.querySelector<HTMLHeadingElement>("#objectives h4");
+  if (objectiveDisplay) {
+    if (gameManager.currState.won) {
+      // Update the display with completed objective (localized)
+      objectiveDisplay.innerHTML = `<strike>${getText("objectiveText", {
+        amount: OBJECTIVE_MONEY,
+      })}</strike> ${getText("wonText", { days: gameManager.currState.dayWon })}`;
+    } else {
+      // Update display to show the active objective
+      objectiveDisplay.textContent = getText("objectiveText", { amount: OBJECTIVE_MONEY });
+    }
   }
 }
 
 function updateObjective() {
-  // Check if objective reached
-  if (
-    gameManager.currState.money >= OBJECTIVE_MONEY && !gameManager.currState.won
-  ) {
+  // Check if the objective is reached
+  if (gameManager.currState.money >= OBJECTIVE_MONEY && !gameManager.currState.won) {
     gameManager.currState.won = true;
     gameManager.currState.dayWon = gameManager.currState.day;
   }
-  // Check if objective is no longer fulfilled
-  if (
-    gameManager.currState.money < OBJECTIVE_MONEY && gameManager.currState.won
-  ) {
+
+  // Check if the objective is no longer fulfilled (e.g., money drops below requirement)
+  if (gameManager.currState.money < OBJECTIVE_MONEY && gameManager.currState.won) {
     gameManager.currState.won = false;
     gameManager.currState.dayWon = 0;
   }
-  updateObjectiveUI();
+
+  // Dynamically update the objective display
+  const objectiveDisplay = document.querySelector<HTMLHeadingElement>("#objectives h4");
+  if (objectiveDisplay) {
+    if (gameManager.currState.won) {
+      // Show completed objective with strike-through
+      objectiveDisplay.innerHTML = `<strike>${getText("objectiveText", {
+        amount: OBJECTIVE_MONEY,
+      })}</strike> ${getText("wonText", { days: gameManager.currState.dayWon })}`;
+    } else {
+      // Show current objective in progress
+      objectiveDisplay.textContent = getText("objectiveText", { amount: OBJECTIVE_MONEY });
+    }
+  }
 }
 
 function changeMoney(change: number) {
+  // Update the money state
   gameManager.currState.money += change;
-  moneyDisplay.innerHTML = `💵 ${gameManager.currState.money}`;
+
+  // Dynamically refresh the money display in the header
+  updateMoneyDisplay();
+
+  // Re-evaluate and update objectives
   updateObjective();
 }
 
 // Create shop
-fishTypes.forEach((fishType) => {
+/*fishTypes.forEach((fishType) => {
   const costDisplay = createHeading({
     text: `💵 ${fishType.cost}`,
     div: shopDiv,
@@ -730,6 +751,7 @@ fishTypes.forEach((fishType) => {
     onClick: () => {
       if (gameManager.currState.money >= fishType.cost) {
         changeMoney(-fishType.cost);
+        updateMoneyDisplay(); 
         const currentCell = gameManager.grid
           .cells[gameManager.player.coords.row][
           gameManager.player.coords.col
@@ -740,7 +762,7 @@ fishTypes.forEach((fishType) => {
       }
     },
   }).append(costDisplay);
-});
+});*/
 
 function draw() {
   if (ctx) {
@@ -891,21 +913,23 @@ function createLanguageDropdown() {
     dropdown.appendChild(option);
   });
 
-  // Restore selected language from localStorage or default to English
+  // Get saved language or default to English
   const savedLanguage = localStorage.getItem("language") || "en";
-  dropdown.value = savedLanguage; // Set the dropdown's initial value to saved or default language
-  document.body.style.direction = savedLanguage === "ar" ? "rtl" : "ltr";
+  dropdown.value = savedLanguage; // Set dropdown to the saved language
+  setLanguage(savedLanguage); // Apply the saved language immediately
+  updateHeader(); // Update the header with the selected language
+  //updateGameUI(); // Update all UI elements with the selected language
 
   // Add an event listener for language changes
   dropdown.addEventListener("change", (event) => {
     const selectedCode = (event.target as HTMLSelectElement).value;
-    setLanguage(selectedCode); // Update the current language
-    localStorage.setItem("language", selectedCode); // Remember the choice in localStorage
-    // Update the localized UI (e.g., just the title for now)
-    updateHeader(); // Directly update affected UI elements
-    updateButtonsText(buttonContainer); // Update the text for the buttons
+    setLanguage(selectedCode); // Update the current language setting
+    localStorage.setItem("language", selectedCode); // Save the language preference
+    updateHeader(); // Dynamically update the header text
+    //updateGameUI(); // Refresh the rest of the UI to reflect the selected language
+    updateButtonsText(buttonContainer); // Refresh button texts
+    createShop(); // Refresh shop button texts
   });
-  
 
   // Add the dropdown to the page (e.g., as the first element in the body)
   document.body.prepend(dropdown);
@@ -965,42 +989,59 @@ function updateHeader() {
   });
   moneyDisplay.style.display = "inline";
 
-  createShop(shopDiv);
+  createShop();
 }
 
-function createShop(shopDiv: HTMLDivElement) {
-  // Clear the shop div
+function createShop() {
+  // Clear the shop div to prevent duplicates
   shopDiv.innerHTML = "";
 
   createHeading({
-    text: getText("shop"), // Localized "Shop"
-    div: shopDiv,
-    size: "h2",
+  text: getText("shop"), // Localized "Shop"
+  div: shopDiv,
+  size: "h2",
   });
 
-  // Dynamically add fish options to the shop
+  // Dynamically add fish buttons and costs
   fishTypes.forEach((fishType) => {
     const costDisplay = createHeading({
-      text: `💵 ${fishType.cost}`, // Localized cost display if needed later
+      text: `💵 ${fishType.cost}`,
       div: shopDiv,
       size: "h5",
     });
 
     createButton({
-      text: `${getText("buy")} ${getText(fishType.typeName)} ${getText("fish")}`, // Localized "Buy Green Fish"
+      text: `${getText("buy")} ${getText(fishType.typeName)} ${getText("fish")}`, // Use translated "Buy X Fish"
       div: shopDiv,
       onClick: () => {
         if (gameManager.currState.money >= fishType.cost) {
-          changeMoney(-fishType.cost); // Deduct money
+          changeMoney(-fishType.cost);
+          updateMoneyDisplay();
           const currentCell = gameManager.grid.cells[gameManager.player.coords.row][gameManager.player.coords.col];
-          addFish(currentCell, fishType, 1); // Add fish to the player's current cell
-          currentCell.updateInfoUI(); // Update cell info
-          gameManager.autoSave(true); // Autosave the game
+          addFish(currentCell, fishType, 1);
+          currentCell.updateInfoUI();
+          gameManager.autoSave(true); // Autosave when fish is bought
         }
       },
     }).append(costDisplay);
   });
 }
+
+function updateMoneyDisplay() {
+  const moneyDisplay = document.querySelector<HTMLHeadingElement>("#header h2");
+  if (moneyDisplay) {
+    moneyDisplay.textContent = `💵 ${gameManager.currState.money}`;
+  }
+}
+
+function updateDayDisplay() {
+  const dayDisplay = document.querySelector<HTMLHeadingElement>("#header h3"); // Select the day display element from the header
+  if (dayDisplay) {
+    dayDisplay.textContent = `${getText("day")} ${gameManager.currState.day}`;
+  }
+}
+
+
 
 
 function updateButtonsText(buttonsContainer: HTMLElement) {
