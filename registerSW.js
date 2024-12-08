@@ -1,1 +1,1 @@
-if('serviceWorker' in navigator) {window.addEventListener('load', () => {navigator.serviceWorker.register('/fishfarm/sw.js', { scope: '/fishfarm/' })})}
+if('serviceWorker' in navigator) {window.addEventListener('load', () => {navigator.serviceWorker.register('/CMPM-121-Final/sw.js', { scope: '/CMPM-121-Final/' })})}
