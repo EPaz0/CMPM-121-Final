@@ -1,6 +1,7 @@
 export type TranslationKeys =
   | "title"
   | "shop"
+  | "tutorialObjective"
   | "objective"
   | "objectiveText"
   | "day"
@@ -16,6 +17,7 @@ export type TranslationKeys =
   | "value"
   | "wonText"
   | "loseText"
+  | "gameWon"
   | "saveGame"
   | "loadGame"
   | "listSaveSlots"
@@ -33,12 +35,16 @@ export type TranslationKeys =
 
 export type LanguageCode = "en" | "es" | "ar";
 
-export const translations: Record<LanguageCode, Record<TranslationKeys, string>> = {
+export const translations: Record<
+  LanguageCode,
+  Record<TranslationKeys, string>
+> = {
   en: {
     // Titles & Main UI
     title: "Fish Farm",
     shop: "Shop",
-    objective: "Objective",
+    tutorialObjective: "Tutorial Objective",
+    objective: "Level {{level}} Objective",
     objectiveText: "Make 💵 {{amount}}",
     day: "Day",
     nextDay: "Next Day",
@@ -59,6 +65,7 @@ export const translations: Record<LanguageCode, Record<TranslationKeys, string>>
     // Win/Lose Messages
     wonText: "You won in {{days}} days!",
     loseText: "Game Over!",
+    gameWon: "Congratulations! You completed the game!",
 
     // Save/Load Buttons
     saveGame: "Save Game",
@@ -86,7 +93,8 @@ export const translations: Record<LanguageCode, Record<TranslationKeys, string>>
     // Titles & Main UI
     title: "Granja de Peces",
     shop: "Tienda",
-    objective: "Objetivo",
+    tutorialObjective: "Objetivo del Tutorial",
+    objective: "Objetivo de Nivel {{level}}",
     objectiveText: "Consigue 💵 {{amount}}",
     day: "Día",
     nextDay: "Siguiente Día",
@@ -107,6 +115,7 @@ export const translations: Record<LanguageCode, Record<TranslationKeys, string>>
     // Win/Lose Messages
     wonText: "¡Ganaste en {{days}} días!",
     loseText: "¡Fin del juego!",
+    gameWon: "¡Felicidades! ¡Has completado el juego!",
 
     // Save/Load Buttons
     saveGame: "Guardar Partida",
@@ -115,9 +124,12 @@ export const translations: Record<LanguageCode, Record<TranslationKeys, string>>
     deleteSaveSlot: "Eliminar Ranura Guardada",
 
     // Save/Load/Delete Prompts
-    savePrompt: "Introduce el nombre de la ranura para guardar (por ejemplo: Slot1):",
-    loadPrompt: "Introduce el nombre de la ranura para cargar (por ejemplo: Slot1):",
-    deletePrompt: "Introduce el nombre de la ranura para eliminar (por ejemplo: Slot1):",
+    savePrompt:
+      "Introduce el nombre de la ranura para guardar (por ejemplo: Slot1):",
+    loadPrompt:
+      "Introduce el nombre de la ranura para cargar (por ejemplo: Slot1):",
+    deletePrompt:
+      "Introduce el nombre de la ranura para eliminar (por ejemplo: Slot1):",
 
     // Save/Load/Delete Alerts
     noSaveData: 'No se encontraron datos guardados para la ranura "{{slot}}".',
@@ -134,7 +146,8 @@ export const translations: Record<LanguageCode, Record<TranslationKeys, string>>
     // Titles & Main UI
     title: "مزرعة الأسماك",
     shop: "المتجر",
-    objective: "الهدف",
+    tutorialObjective: "هدف البرنامج التعليمي",
+    objective: "{{level}} الهدف من المستوى",
     objectiveText: "اكسب 💵 {{amount}}",
     day: "يوم",
     nextDay: "اليوم التالي",
@@ -155,6 +168,7 @@ export const translations: Record<LanguageCode, Record<TranslationKeys, string>>
     // Win/Lose Messages
     wonText: "فزت في {{days}} يومًا!",
     loseText: "انتهت اللعبة!",
+    gameWon: "مبروك! لقد أكملت اللعبة!",
 
     // Save/Load Buttons
     saveGame: "حفظ اللعبة",

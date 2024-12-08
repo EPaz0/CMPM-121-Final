@@ -2,14 +2,14 @@ tutorial:
   grid_size: [2,3]
   species:
     - green
-  goal: 250
+  objective: 250
 
 level1:
   grid_size: [3,4]
   species:
     - green
     - yellow
-  goal: 1000
+  objective: 1000
   special_events:
     - [5, heatwave, 4]
     - [12, baby_boom, 3]
@@ -20,7 +20,7 @@ level2:
     - green
     - yellow
     - red
-  goal: 1000
+  objective: 5000
   special_events:
     - [3, storm, 4]
     - [8, heatwave, 3]

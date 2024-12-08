@@ -11,12 +11,9 @@ for (const key in scenariosJSON) {
   // deno-lint-ignore no-explicit-any
   scenarios.push((scenariosJSON as { [key: string]: any })[key]);
 }
-console.log(scenarios);
 
 // Scenario values
-let scenario = 0; // 0 = Tutorial, 1 = Level 1, etc.
-let goalMoney = 500;
-let gridSize = { rows: 4, cols: 5 };
+let objectiveMoney: number;
 let species: string[] = [];
 
 const canvas = document.getElementById("gameCanvas") as HTMLCanvasElement;
@@ -303,10 +300,10 @@ class Grid {
   cells: Cell[][];
   state: Uint8Array;
 
-  constructor() {
+  constructor(scenario: number) {
     this.seed = getRandomSeed(SEEDS);
-    this.rows = gridSize.rows;
-    this.cols = gridSize.cols;
+    this.rows = scenarios[scenario].grid_size[0];
+    this.cols = scenarios[scenario].grid_size[1];
     this.cells = Array.from(
       { length: this.rows },
       (_, rowIndex) =>
@@ -412,15 +409,22 @@ interface GameState {
   won: boolean;
   dayWon: number;
   gridState: number[];
+  scenario: number;
 }
 
-function createGameState(grid: Grid) {
+function createGameState(
+  grid: Grid,
+  scenario: number,
+  day?: number,
+  money?: number,
+) {
   return {
-    day: 0,
-    money: STARTING_MONEY,
+    day: day != undefined ? day : 0,
+    money: money != undefined ? money : STARTING_MONEY,
     won: false,
     dayWon: 0,
     gridState: Array.from(grid.state),
+    scenario: scenario,
   };
 }
 
@@ -447,7 +451,6 @@ class Player {
 
 interface GameSave {
   seed: number;
-  scenario: number;
   gameStates: GameState[];
 }
 
@@ -458,39 +461,44 @@ function getRandomSeed(max: number) {
 class GameManager {
   grid: Grid;
   player: Player;
+  clickedCell: Cell;
   currSave: GameSave;
   currState: GameState;
   redoStates: GameState[]; // Array of game states that can be re-instantiated
 
   constructor() {
-    this.grid = new Grid();
+    this.grid = new Grid(0);
     this.grid.setInitialCellStats();
     this.player = new Player();
+    this.clickedCell = this.grid.cells[0][0];
     this.currSave = {
       seed: this.grid.seed,
-      scenario: scenario,
-      gameStates: [createGameState(this.grid)],
+      gameStates: [],
     };
-    this.currState = createGameState(this.grid);
+    this.currState = createGameState(this.grid, 0);
     this.redoStates = [];
   }
 
   setScenario() {
-    const newScenario = scenarios[scenario];
-    goalMoney = newScenario.goal;
-    gridSize = {
-      rows: newScenario.grid_size[0],
-      cols: newScenario.grid_size[1],
-    };
-    species = newScenario.species.slice();
     // Rebuild grid with correct size for given scenario
-    this.grid = new Grid();
+    this.grid = new Grid(this.currState.scenario);
+    this.grid.seed = this.currSave.seed;
     this.grid.setInitialCellStats();
-    this.currState = createGameState(this.grid);
+    this.currState = createGameState(
+      this.grid,
+      this.currState.scenario,
+      this.currState.day,
+      this.currState.money,
+    );
+    objectiveMoney = scenarios[this.currState.scenario].objective;
+    this.clickedCell = this.grid.cells[0][0];
+    this.player.move(0, 0);
+    popup.style.display = "none"; // Remove popup when player goes to next level
+    updateObjective();
   }
 
   nextScenario() {
-    scenario++;
+    this.currState.scenario++;
     this.setScenario();
   }
 
@@ -499,15 +507,14 @@ class GameManager {
     this.currState.money = gameState.money;
     this.currState.won = gameState.won;
     this.currState.dayWon = gameState.dayWon;
+    this.currState.scenario = gameState.scenario;
+    this.setScenario();
     this.grid.state.set(gameState.gridState); // Restore the byte array
     this.grid.decode(); // Rebuild the grid
-    updateObjective();
-    this.updateGameUI();
+    updateHeader();
   }
 
   restoreGameSave(gameSave: GameSave) {
-    scenario = gameSave.scenario;
-    this.setScenario(); // Restore the scenario
     this.grid.seed = gameSave.seed;
     this.currSave.seed = gameSave.seed;
     this.currSave.gameStates = gameSave.gameStates.map((
@@ -518,9 +525,20 @@ class GameManager {
       won: state.won,
       dayWon: state.dayWon,
       gridState: state.gridState,
+      scenario: state.scenario,
     }));
-    this.currState =
+    const savedState =
       this.currSave.gameStates[this.currSave.gameStates.length - 1];
+    // console.log("Restoring game state:");
+    // console.log(savedState);
+    this.currState = {
+      day: savedState.day,
+      money: savedState.money,
+      won: savedState.won,
+      dayWon: savedState.dayWon,
+      gridState: savedState.gridState,
+      scenario: savedState.scenario,
+    };
     this.restoreGameState(this.currState);
   }
 
@@ -542,9 +560,12 @@ class GameManager {
       won: this.currState.won,
       dayWon: this.currState.dayWon,
       gridState: Array.from(this.grid.state), // Convert byte array to a regular array
+      scenario: this.currState.scenario,
     };
     this.currSave.gameStates.push(gameState);
     this.saveToSlot("AutoSave");
+    // console.log("Current game states:");
+    // console.log(this.currSave.gameStates);
     if (clearRedos) {
       this.redoStates = [];
     }
@@ -612,14 +633,6 @@ class GameManager {
     updateDayDisplay();
     this.autoSave(true); // Autosave at the end of each day
   }
-
-  updateGameUI() {
-    updateDayDisplay();
-    updateMoneyDisplay();
-    const currentCell =
-      this.grid.cells[this.player.coords.row][this.player.coords.col];
-    currentCell.updateInfoUI();
-  }
 }
 
 function handleKeyboardMovement(
@@ -667,9 +680,6 @@ function handleKeyboardMovement(
 const gameManager = new GameManager();
 gameManager.setScenario();
 
-// Set up canvas based on grid size
-canvas.width = gameManager.grid.cols * CELL_SIZE + GRID_OFFSET;
-canvas.height = gameManager.grid.rows * CELL_SIZE + GRID_OFFSET;
 // Listen for player's keyboard movement
 document.addEventListener("keydown", (e) => {
   handleKeyboardMovement(gameManager, e);
@@ -678,54 +688,64 @@ document.addEventListener("keydown", (e) => {
 createLanguageDropdown(); // Set up language options
 updateHeader();
 
-function updateObjectiveUI() {
-  const objectiveDisplay = document.querySelector<HTMLHeadingElement>(
-    "#objectives h4",
-  );
-  if (objectiveDisplay) {
-    if (gameManager.currState.won) {
-      // Update the display with completed objective (localized)
-      objectiveDisplay.innerHTML = `<strike>${
-        getText("objectiveText", {
-          amount: goalMoney,
-        })
-      }</strike> ${getText("wonText", { days: gameManager.currState.dayWon })}`;
-    } else {
-      // Update display to show the active objective
-      objectiveDisplay.textContent = getText("objectiveText", {
-        amount: goalMoney,
-      });
-    }
-  }
-}
-
 function updateObjective() {
   // Check if the objective is reached
   if (
-    gameManager.currState.money >= goalMoney && !gameManager.currState.won
+    gameManager.currState.money >= objectiveMoney && !gameManager.currState.won
   ) {
     gameManager.currState.won = true;
     gameManager.currState.dayWon = gameManager.currState.day;
   }
 
   // Dynamically update the objective display
-  const objectiveDisplay = document.querySelector<HTMLHeadingElement>(
-    "#objectives h4",
-  );
-  if (objectiveDisplay) {
-    if (gameManager.currState.won) {
-      // Show completed objective with strike-through
-      objectiveDisplay.innerHTML = `<strike>${
-        getText("objectiveText", {
-          amount: goalMoney,
-        })
-      }</strike> ${getText("wonText", { days: gameManager.currState.dayWon })}`;
-    } else {
-      // Show current objective in progress
-      objectiveDisplay.textContent = getText("objectiveText", {
-        amount: goalMoney,
-      });
-    }
+  const objectivesDiv = document.querySelector<HTMLDivElement>("#objectives")!;
+  objectivesDiv.innerHTML = ""; // First lear objectives div
+
+  // Create the objective title
+  createHeading({
+    text: gameManager.currState.scenario == 0
+      ? getText("tutorialObjective")
+      : getText("objective", { level: gameManager.currState.scenario }), // Localized "Objective"
+    div: objectivesDiv,
+    size: "h2",
+  });
+
+  // Create the objective instructions
+  createHeading({
+    text: gameManager.currState.won
+      ? `<strike>${
+        getText("objectiveText", { amount: objectiveMoney })
+      }</strike> ${getText("wonText", { days: gameManager.currState.dayWon })}`
+      : getText("objectiveText", { amount: objectiveMoney }), // Localized "Make 💵 X"
+    div: objectivesDiv,
+    size: "h4",
+  });
+
+  // If the level objective is complete (and there is another level), players have the option to go to the next level
+  if (
+    gameManager.currState.won &&
+    gameManager.currState.scenario < scenarios.length - 1
+  ) {
+    const objectivesDiv = document.querySelector<HTMLDivElement>(
+      "#objectives",
+    )!;
+    createButton({
+      text: "Next Level",
+      div: objectivesDiv,
+      onClick: () => {
+        gameManager.nextScenario();
+        gameManager.autoSave(true);
+      },
+    });
+  } else if (
+    gameManager.currState.won &&
+    gameManager.currState.scenario >= scenarios.length - 1
+  ) {
+    createHeading({
+      text: getText("gameWon"),
+      div: objectivesDiv,
+      size: "h3",
+    });
   }
 }
 
@@ -741,6 +761,9 @@ function changeMoney(change: number) {
 }
 
 function draw() {
+  // Set up canvas based on grid size
+  canvas.width = gameManager.grid.cols * CELL_SIZE + GRID_OFFSET;
+  canvas.height = gameManager.grid.rows * CELL_SIZE + GRID_OFFSET;
   if (ctx) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     gameManager.grid.draw(ctx);
@@ -761,7 +784,7 @@ if (localStorage.getItem("FishFarm_AutoSave")) {
   }
 } else {
   alert("No autosave found. Starting a new game.");
-  gameManager.saveToSlot("AutoSave"); // Create the first autosave
+  gameManager.autoSave(false); // Create the first autosave
 }
 
 document.addEventListener("keydown", (event) => {
@@ -778,7 +801,6 @@ function sellFish(cell: Cell, fish: Fish) {
   gameManager.autoSave(true); // Autosave when fish is sold
 }
 
-let clickedCell: Cell = gameManager.grid.cells[0][0];
 canvas.addEventListener("click", (event) => {
   const rect = canvas.getBoundingClientRect();
   const mouseX = event.x - rect.left;
@@ -787,10 +809,10 @@ canvas.addEventListener("click", (event) => {
   const clickedCol = Math.floor(mouseX / CELL_SIZE);
   const clickedRow = Math.floor(mouseY / CELL_SIZE);
 
-  clickedCell = gameManager.grid.cells[clickedRow][clickedCol];
+  gameManager.clickedCell = gameManager.grid.cells[clickedRow][clickedCol];
   gameManager.player.move(clickedRow, clickedCol);
-  clickedCell.updateInfoUI();
-  clickedCell.updatePopupUI();
+  gameManager.clickedCell.updateInfoUI();
+  gameManager.clickedCell.updatePopupUI();
 
   popup.style.left = `${event.x + 10}px`;
   popup.style.top = `${event.y + 10}px`;
@@ -805,7 +827,7 @@ document.addEventListener("click", (event) => {
   ) {
     popup.style.display = "none";
   } else { // Otherwise, update the popup to reflect current state
-    clickedCell.updatePopupUI();
+    gameManager.clickedCell.updatePopupUI();
   }
 });
 
@@ -892,7 +914,6 @@ function createLanguageDropdown() {
   dropdown.value = savedLanguage; // Set dropdown to the saved language
   setLanguage(savedLanguage); // Apply the saved language immediately
   updateHeader(); // Update the header with the selected language
-  //updateGameUI(); // Update all UI elements with the selected language
 
   // Add an event listener for language changes
   dropdown.addEventListener("change", (event) => {
@@ -900,7 +921,6 @@ function createLanguageDropdown() {
     setLanguage(selectedCode); // Update the current language setting
     localStorage.setItem("language", selectedCode); // Save the language preference
     updateHeader(); // Dynamically update the header text
-    //updateGameUI(); // Refresh the rest of the UI to reflect the selected language
     updateButtonsText(buttonContainer); // Refresh button texts
     createShop(); // Refresh shop button texts
   });
@@ -922,19 +942,6 @@ function updateHeader() {
     text: getText("title"), // Localized "Fish Farm"
     div: headerDiv,
     size: "h1",
-  });
-
-  // Update the Objective/Day displays
-  createHeading({
-    text: getText("objective"), // Localized "Objective"
-    div: objectivesDiv,
-    size: "h2",
-  });
-
-  const _objectiveDisplay = createHeading({
-    text: getText("objectiveText", { amount: goalMoney }), // Localized "Make 💵 X"
-    div: objectivesDiv,
-    size: "h4",
   });
 
   const dayDisplay = createHeading({
@@ -962,6 +969,7 @@ function updateHeader() {
   moneyDisplay.style.display = "inline";
 
   createShop();
+  updateObjective();
 }
 
 function createShop() {
