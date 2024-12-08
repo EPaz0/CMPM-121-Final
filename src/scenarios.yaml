@@ -1,14 +1,14 @@
 tutorial:
   grid_size: [2,3]
-  species:
-    - green
+  available_fish_types:
+    - Green
   objective: 250
 
 level1:
   grid_size: [3,4]
-  species:
-    - green
-    - yellow
+  available_fish_types:
+    - Green
+    - Yellow
   objective: 1000
   special_events:
     - [5, heatwave, 4]
@@ -16,10 +16,10 @@ level1:
 
 level2:
   grid_size: [4,5]
-  species:
-    - green
-    - yellow
-    - red
+  available_fish_types:
+    - Green
+    - Yellow
+    - Red
   objective: 5000
   special_events:
     - [3, storm, 4]

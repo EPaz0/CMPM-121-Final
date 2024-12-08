@@ -12,10 +12,6 @@ for (const key in scenariosJSON) {
   scenarios.push((scenariosJSON as { [key: string]: any })[key]);
 }
 
-// Scenario values
-let objectiveMoney: number;
-let species: string[] = [];
-
 const canvas = document.getElementById("gameCanvas") as HTMLCanvasElement;
 const ctx = canvas.getContext("2d");
 const popup = document.createElement("div");
@@ -45,6 +41,10 @@ const CELL_SIZE = 150; // Size of each grid cell
 const GRID_OFFSET = 10;
 
 type FishTypeName = "Green" | "Yellow" | "Red";
+
+// Scenario values
+let objectiveMoney: number;
+let availableFishTypes: FishTypeName[];
 
 interface FishType {
   typeName: FishTypeName;
@@ -491,10 +491,13 @@ class GameManager {
       this.currState.money,
     );
     objectiveMoney = scenarios[this.currState.scenario].objective;
+    availableFishTypes = scenarios[this.currState.scenario].available_fish_types
+      .slice();
+    // Reset the clicked cell
     this.clickedCell = this.grid.cells[0][0];
     this.player.move(0, 0);
     popup.style.display = "none"; // Remove popup when player goes to next level
-    updateObjective();
+    updateHeader();
   }
 
   nextScenario() {
@@ -511,7 +514,6 @@ class GameManager {
     this.setScenario();
     this.grid.state.set(gameState.gridState); // Restore the byte array
     this.grid.decode(); // Rebuild the grid
-    updateHeader();
   }
 
   restoreGameSave(gameSave: GameSave) {
@@ -679,14 +681,12 @@ function handleKeyboardMovement(
 
 const gameManager = new GameManager();
 gameManager.setScenario();
+createLanguageDropdown(); // Set up language options
 
 // Listen for player's keyboard movement
 document.addEventListener("keydown", (e) => {
   handleKeyboardMovement(gameManager, e);
 });
-
-createLanguageDropdown(); // Set up language options
-updateHeader();
 
 function updateObjective() {
   // Check if the objective is reached
@@ -972,6 +972,39 @@ function updateHeader() {
   updateObjective();
 }
 
+function createFishButton(div: HTMLDivElement, fishType: FishType) {
+  const costDisplay = createHeading({
+    text: `💵 ${fishType.cost}`,
+    div: div,
+    size: "h5",
+  });
+
+  createButton({
+    text: `${getText("buy")} ${getText(fishType.typeName)} ${getText("fish")}`, // Use translated "Buy X Fish"
+    div: div,
+    onClick: () => {
+      if (gameManager.currState.money >= fishType.cost) {
+        changeMoney(-fishType.cost);
+        updateMoneyDisplay();
+        const currentCell = gameManager.grid
+          .cells[gameManager.player.coords.row][
+            gameManager.player.coords.col
+          ];
+        addFish(currentCell, fishType, 1);
+        currentCell.updateInfoUI();
+        gameManager.autoSave(true); // Autosave when fish is bought
+      }
+    },
+  }).append(costDisplay);
+}
+
+function fishTypeIsAvailable(fishType: FishTypeName): boolean {
+  for (let i = 0; i < availableFishTypes.length; i++) {
+    if (availableFishTypes[i] == fishType) return true;
+  }
+  return false;
+}
+
 function createShop() {
   const shopDiv = document.querySelector<HTMLDivElement>("#shop")!;
 
@@ -986,31 +1019,9 @@ function createShop() {
 
   // Dynamically add fish buttons and costs
   fishTypes.forEach((fishType) => {
-    const costDisplay = createHeading({
-      text: `💵 ${fishType.cost}`,
-      div: shopDiv,
-      size: "h5",
-    });
-
-    createButton({
-      text: `${getText("buy")} ${getText(fishType.typeName)} ${
-        getText("fish")
-      }`, // Use translated "Buy X Fish"
-      div: shopDiv,
-      onClick: () => {
-        if (gameManager.currState.money >= fishType.cost) {
-          changeMoney(-fishType.cost);
-          updateMoneyDisplay();
-          const currentCell = gameManager.grid
-            .cells[gameManager.player.coords.row][
-              gameManager.player.coords.col
-            ];
-          addFish(currentCell, fishType, 1);
-          currentCell.updateInfoUI();
-          gameManager.autoSave(true); // Autosave when fish is bought
-        }
-      },
-    }).append(costDisplay);
+    if (fishTypeIsAvailable(fishType.typeName)) {
+      createFishButton(shopDiv, fishType);
+    }
   });
 }
 
