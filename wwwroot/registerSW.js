@@ -1,0 +1,1 @@
+if('serviceWorker' in navigator) {window.addEventListener('load', () => {navigator.serviceWorker.register('/CMPM-121-Final/sw.js', { scope: '/CMPM-121-Final/' })})}
