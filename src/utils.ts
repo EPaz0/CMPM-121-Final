@@ -1,4 +1,5 @@
 // Helpful functions whose implementations don't need to be seen in main program
+import luck from "./luck.ts";
 
 interface ButtonConfig {
   text: string;
@@ -27,4 +28,20 @@ export function createHeading(config: HeadingConfig): HTMLElement {
   newHeading.innerHTML = config.text;
   config.div.append(newHeading);
   return newHeading;
+}
+
+export function getLuck(
+  factors: (string | number)[],
+  min?: number,
+  max?: number,
+) {
+  if (min && max) {
+    const minCeiled = Math.ceil(min);
+    const maxFloored = Math.floor(max);
+    return Math.floor(
+      luck(factors.toString()) * (maxFloored - minCeiled + 1) + minCeiled,
+    );
+  } else {
+    return luck(factors.toString());
+  }
 }
