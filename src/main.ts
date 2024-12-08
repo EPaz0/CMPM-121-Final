@@ -5,6 +5,7 @@ import { getText, setLanguage } from "./i18nHelper.ts";
 
 // Get scenarios from JSON file (converted from YAML file)
 import scenariosJSON from "./scenarios.json" with { type: "json" };
+import { TranslationKeys } from "./translations.ts";
 // deno-lint-ignore no-explicit-any
 const scenarios: any[] = [];
 for (const key in scenariosJSON) {
@@ -12,7 +13,8 @@ for (const key in scenariosJSON) {
   scenarios.push((scenariosJSON as { [key: string]: any })[key]);
 }
 
-// Modifiable gameplay values
+// ------------------------------------ MODIFIABLE CONSTANTS
+// Gameplay values
 const SEEDS = 10000; // The number of random seeds there are
 const STARTING_MONEY = 30;
 const BASE_FISH_COST = 15;
@@ -25,10 +27,10 @@ const CELL_CAPACITY_THRESHOLD = 5; // The threshold at which fish can no longer 
 const CAPACITY_PENALTY = 2; // The amount by which max growth decreases for each fish above capacity
 const CELL_MAX_FOOD = 10;
 const CELL_MAX_SUNLIGHT = 10;
-
-// Modifiable visual values
+// Visual values
 const CELL_SIZE = 150; // Size of each grid cell
 const GRID_OFFSET = 10;
+// ------------------------------------ END MODIFIABLE CONSTANTS
 
 // Scenario values
 let objectiveMoney: number;
@@ -248,6 +250,14 @@ class Cell {
     }
   }
 
+  sellFish(fish: Fish) {
+    changeMoney(fish.value);
+    const fishIndex = this.population.indexOf(fish);
+    this.population.splice(fishIndex, 1);
+    this.updateInfoUI();
+    gameManager.autoSave(true); // Autosave when fish is sold
+  }
+
   updateInfoUI() {
     const cellInfoDiv = document.getElementById("cell-info");
     if (cellInfoDiv) {
@@ -288,7 +298,7 @@ class Cell {
           text: getText("sell"), // Localized "Sell" button
           div: popup,
           onClick: () => {
-            sellFish(this, fish);
+            this.sellFish(fish);
           },
         });
       });
@@ -761,6 +771,167 @@ document.addEventListener("click", (event) => {
 });
 // ------------------------------------ END GAME SET-UP
 
+// Create a button container and style it
+const buttonContainer = document.createElement("div");
+buttonContainer.style.position = "absolute";
+buttonContainer.style.top = "10px"; // Adjust distance from the top
+buttonContainer.style.right = "10px"; // Adjust distance from the right
+buttonContainer.style.display = "flex";
+buttonContainer.style.flexDirection = "row"; // Keep buttons horizontal
+buttonContainer.style.gap = "10px"; // Add spacing between buttons
+document.body.appendChild(buttonContainer);
+
+createButton({
+  text: "↩️", // Undo
+  div: buttonContainer,
+  onClick: () => {
+    gameManager.undo();
+  },
+});
+
+createButton({
+  text: "↪️", // Redo
+  div: buttonContainer,
+  onClick: () => {
+    gameManager.redo();
+  },
+});
+
+const localizedButtonConfigs: {
+  key: TranslationKeys;
+  text: string;
+  div: HTMLDivElement;
+  onClick: () => void;
+}[] = [
+  {
+    key: "saveGame",
+    text: getText("saveGame"),
+    div: buttonContainer,
+    onClick: () => {
+      const slot = prompt(getText("savePrompt"));
+      if (slot) gameManager.saveToSlot(slot);
+    },
+  },
+  {
+    key: "loadGame",
+    text: getText("loadGame"), // Localized on initial creation
+    div: buttonContainer,
+    onClick: () => {
+      const slot = prompt(getText("loadPrompt"));
+      if (slot) gameManager.loadFromSlot(slot);
+    },
+  },
+  {
+    key: "listSaveSlots",
+    text: getText("listSaveSlots"), // Localized on initial creation
+    div: buttonContainer,
+    onClick: () => {
+      gameManager.displaySaveSlots();
+    },
+  },
+  {
+    key: "deleteSaveSlot",
+    text: getText("deleteSaveSlot"), // Localized on initial creation
+    div: buttonContainer,
+    onClick: () => {
+      const slot = prompt(getText("deletePrompt"));
+      if (slot) gameManager.deleteSlot(slot);
+    },
+  },
+];
+
+// Create all localized buttons from button configs
+const localizedButtons: HTMLButtonElement[] = [];
+localizedButtonConfigs.forEach((button) => {
+  const newButton = createButton({
+    text: button.text,
+    div: button.div,
+    onClick: button.onClick,
+  });
+  localizedButtons.push(newButton);
+});
+
+function updateLocalizedButtons() {
+  for (let i = 0; i < localizedButtons.length; i++) {
+    localizedButtons[i].textContent = getText(localizedButtonConfigs[i].key);
+  }
+}
+
+function createLanguageDropdown() {
+  const dropdown = document.createElement("select");
+
+  // Add language options
+  const languages = [
+    { code: "en", label: "English" },
+    { code: "es", label: "Español" },
+    { code: "ar", label: "العربية" },
+  ];
+
+  languages.forEach((lang) => {
+    const option = document.createElement("option");
+    option.value = lang.code; // The language code
+    option.textContent = lang.label; // The display label
+    dropdown.appendChild(option);
+  });
+
+  // Get saved language or default to English
+  const savedLanguage = localStorage.getItem("language") || "en";
+  dropdown.value = savedLanguage; // Set dropdown to the saved language
+  setLanguage(savedLanguage); // Apply the saved language immediately
+  updateGameUI(); // Update UI with the selected language
+
+  // Add an event listener for language changes
+  dropdown.addEventListener("change", (event) => {
+    const selectedCode = (event.target as HTMLSelectElement).value;
+    setLanguage(selectedCode); // Update the current language setting
+    localStorage.setItem("language", selectedCode); // Save the language preference
+    updateGameUI(); // Dynamically update the header text
+    updateLocalizedButtons(); // Refresh button texts
+    createShop(); // Refresh shop button texts
+  });
+
+  // Add the dropdown to the page (e.g., as the first element in the body)
+  document.body.prepend(dropdown);
+}
+
+function updateHeader() {
+  const headerDiv = document.querySelector<HTMLDivElement>("#header")!;
+
+  // Clear existing content
+  headerDiv.innerHTML = "";
+
+  // Update the game's main title
+  createHeading({
+    text: getText("title"), // Localized "Fish Farm"
+    div: headerDiv,
+    size: "h1",
+  });
+
+  const dayDisplay = createHeading({
+    text: `${getText("day")} ${gameManager.currState.day}`, // Localized "Day X"
+    div: headerDiv,
+    size: "h3",
+  });
+  dayDisplay.style.display = "inline";
+  dayDisplay.style.marginRight = "20px";
+
+  // Add the "Next Day" button
+  createButton({
+    text: getText("nextDay"), // Localized "Next Day"
+    div: headerDiv,
+    onClick: () => {
+      gameManager.nextDay();
+    },
+  });
+
+  const moneyDisplay = createHeading({
+    text: `💵 ${gameManager.currState.money}`,
+    div: headerDiv,
+    size: "h2",
+  });
+  moneyDisplay.style.display = "inline";
+}
+
 function updateObjectiveUI() {
   // Dynamically update the objective display
   const objectivesDiv = document.querySelector<HTMLDivElement>("#objectives")!;
@@ -836,156 +1007,6 @@ function changeMoney(change: number) {
   updateObjective();
 }
 
-// Create a button container and style it
-const buttonContainer = document.createElement("div");
-buttonContainer.style.position = "absolute";
-buttonContainer.style.top = "10px"; // Adjust distance from the top
-buttonContainer.style.right = "10px"; // Adjust distance from the right
-buttonContainer.style.display = "flex";
-buttonContainer.style.flexDirection = "row"; // Keep buttons horizontal
-buttonContainer.style.gap = "10px"; // Add spacing between buttons
-document.body.appendChild(buttonContainer);
-
-createButton({
-  text: "↩️", // Undo
-  div: buttonContainer,
-  onClick: () => {
-    gameManager.undo();
-  },
-});
-
-createButton({
-  text: "↪️", // Redo
-  div: buttonContainer,
-  onClick: () => {
-    gameManager.redo();
-  },
-});
-
-createButton({
-  text: getText("saveGame"), // Localized on initial creation
-  div: buttonContainer,
-  onClick: () => {
-    const slot = prompt(getText("savePrompt"));
-    if (slot) gameManager.saveToSlot(slot);
-  },
-}).setAttribute("data-button", "saveGame"); // Add "saveGame" identifier
-
-createButton({
-  text: getText("loadGame"), // Localized on initial creation
-  div: buttonContainer,
-  onClick: () => {
-    const slot = prompt(getText("loadPrompt"));
-    if (slot) gameManager.loadFromSlot(slot);
-  },
-}).setAttribute("data-button", "loadGame"); // Add "loadGame" identifier
-
-createButton({
-  text: getText("listSaveSlots"), // Localized on initial creation
-  div: buttonContainer,
-  onClick: () => {
-    gameManager.displaySaveSlots();
-  },
-}).setAttribute("data-button", "listSaveSlots"); // Add "listSaveSlots" identifier
-
-createButton({
-  text: getText("deleteSaveSlot"), // Localized on initial creation
-  div: buttonContainer,
-  onClick: () => {
-    const slot = prompt(getText("deletePrompt"));
-    if (slot) gameManager.deleteSlot(slot);
-  },
-}).setAttribute("data-button", "deleteSaveSlot"); // Add "deleteSaveSlot" identifier
-
-function createLanguageDropdown() {
-  const dropdown = document.createElement("select");
-
-  // Add language options
-  const languages = [
-    { code: "en", label: "English" },
-    { code: "es", label: "Español" },
-    { code: "ar", label: "العربية" },
-  ];
-
-  languages.forEach((lang) => {
-    const option = document.createElement("option");
-    option.value = lang.code; // The language code
-    option.textContent = lang.label; // The display label
-    dropdown.appendChild(option);
-  });
-
-  // Get saved language or default to English
-  const savedLanguage = localStorage.getItem("language") || "en";
-  dropdown.value = savedLanguage; // Set dropdown to the saved language
-  setLanguage(savedLanguage); // Apply the saved language immediately
-  updateGameUI(); // Update UI with the selected language
-
-  // Add an event listener for language changes
-  dropdown.addEventListener("change", (event) => {
-    const selectedCode = (event.target as HTMLSelectElement).value;
-    setLanguage(selectedCode); // Update the current language setting
-    localStorage.setItem("language", selectedCode); // Save the language preference
-    updateGameUI(); // Dynamically update the header text
-    updateButtonsText(buttonContainer); // Refresh button texts
-    createShop(); // Refresh shop button texts
-  });
-
-  // Add the dropdown to the page (e.g., as the first element in the body)
-  document.body.prepend(dropdown);
-}
-
-function updateHeader() {
-  const headerDiv = document.querySelector<HTMLDivElement>("#header")!;
-
-  // Clear existing content
-  headerDiv.innerHTML = "";
-
-  // Update the game's main title
-  createHeading({
-    text: getText("title"), // Localized "Fish Farm"
-    div: headerDiv,
-    size: "h1",
-  });
-
-  const dayDisplay = createHeading({
-    text: `${getText("day")} ${gameManager.currState.day}`, // Localized "Day X"
-    div: headerDiv,
-    size: "h3",
-  });
-  dayDisplay.style.display = "inline";
-  dayDisplay.style.marginRight = "20px";
-
-  // Add the "Next Day" button
-  createButton({
-    text: getText("nextDay"), // Localized "Next Day"
-    div: headerDiv,
-    onClick: () => {
-      gameManager.nextDay();
-    },
-  });
-
-  const moneyDisplay = createHeading({
-    text: `💵 ${gameManager.currState.money}`,
-    div: headerDiv,
-    size: "h2",
-  });
-  moneyDisplay.style.display = "inline";
-}
-
-function updateGameUI() {
-  updateHeader();
-  createShop();
-  updateObjective();
-}
-
-function sellFish(cell: Cell, fish: Fish) {
-  changeMoney(fish.value);
-  const fishIndex = cell.population.indexOf(fish);
-  cell.population.splice(fishIndex, 1);
-  cell.updateInfoUI();
-  gameManager.autoSave(true); // Autosave when fish is sold
-}
-
 function createFishButton(div: HTMLDivElement, fishType: FishType) {
   const costDisplay = createHeading({
     text: `💵 ${fishType.cost}`,
@@ -1053,36 +1074,8 @@ function updateDayUI() {
   }
 }
 
-function updateButtonsText(buttonsContainer: HTMLElement) {
-  // Update the text for the "Save Game" button
-  const saveGameButton = buttonsContainer.querySelector<HTMLButtonElement>(
-    '[data-button="saveGame"]',
-  );
-  if (saveGameButton) {
-    saveGameButton.textContent = getText("saveGame"); // Localized "Save Game"
-  }
-
-  // Update the text for the "Load Game" button
-  const loadGameButton = buttonsContainer.querySelector<HTMLButtonElement>(
-    '[data-button="loadGame"]',
-  );
-  if (loadGameButton) {
-    loadGameButton.textContent = getText("loadGame"); // Localized "Load Game"
-  }
-
-  // Update the text for the "List Save Slots" button
-  const listSaveSlotsButton = buttonsContainer.querySelector<HTMLButtonElement>(
-    '[data-button="listSaveSlots"]',
-  );
-  if (listSaveSlotsButton) {
-    listSaveSlotsButton.textContent = getText("listSaveSlots"); // Localized "List Save Slots"
-  }
-
-  // Update the text for the "Delete Save Slot" button
-  const deleteSaveSlotButton = buttonsContainer.querySelector<
-    HTMLButtonElement
-  >('[data-button="deleteSaveSlot"]');
-  if (deleteSaveSlotButton) {
-    deleteSaveSlotButton.textContent = getText("deleteSaveSlot"); // Localized "Delete Save Slot"
-  }
+function updateGameUI() {
+  updateHeader();
+  createShop();
+  updateObjective();
 }
