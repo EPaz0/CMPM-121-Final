@@ -12,16 +12,6 @@ for (const key in scenariosJSON) {
   scenarios.push((scenariosJSON as { [key: string]: any })[key]);
 }
 
-const canvas = document.getElementById("gameCanvas") as HTMLCanvasElement;
-const ctx = canvas.getContext("2d");
-const popup = document.createElement("div");
-popup.style.position = "absolute";
-popup.style.backgroundColor = "white";
-popup.style.border = "1px solid black";
-popup.style.padding = "10px";
-popup.style.display = "none";
-document.body.append(popup);
-
 // Modifiable gameplay values
 const SEEDS = 10000; // The number of random seeds there are
 const STARTING_MONEY = 30;
@@ -40,11 +30,22 @@ const CELL_MAX_SUNLIGHT = 10;
 const CELL_SIZE = 150; // Size of each grid cell
 const GRID_OFFSET = 10;
 
-type FishTypeName = "Green" | "Yellow" | "Red";
-
 // Scenario values
 let objectiveMoney: number;
 let availableFishTypes: FishTypeName[];
+
+// Set up canvas and popup
+const canvas = document.getElementById("gameCanvas") as HTMLCanvasElement;
+const ctx = canvas.getContext("2d");
+const popup = document.createElement("div");
+popup.style.position = "absolute";
+popup.style.backgroundColor = "white";
+popup.style.border = "1px solid black";
+popup.style.padding = "10px";
+popup.style.display = "none";
+document.body.append(popup);
+
+type FishTypeName = "Green" | "Yellow" | "Red";
 
 interface FishType {
   typeName: FishTypeName;
@@ -61,31 +62,7 @@ interface Fish {
   value: number;
 }
 
-const fishTypes: FishType[] = [
-  {
-    typeName: "Green",
-    cost: BASE_FISH_COST,
-    growthMultiplier: 1,
-    minValueGain: 1,
-    maxValueGain: 3,
-  },
-  {
-    typeName: "Yellow",
-    cost: BASE_FISH_COST * 2,
-    growthMultiplier: .75,
-    minValueGain: 2,
-    maxValueGain: 4,
-  },
-  {
-    typeName: "Red",
-    cost: BASE_FISH_COST * 3,
-    growthMultiplier: .5,
-    minValueGain: 3,
-    maxValueGain: 5,
-  },
-];
-
-function fishToString(fish: Fish) {
+function fishToString(fish: Fish): string {
   return `\n${getText(fish.type.typeName)} ${getText("fish")} | ${
     getText("growth")
   }: ${fish.growth}/${FISH_MAX_GROWTH}, ${
@@ -114,6 +91,42 @@ function getFishOfType(cell: Cell, typeName: FishTypeName) {
     }
   }
   return fish;
+}
+
+const fishTypes: FishType[] = [
+  {
+    typeName: "Green",
+    cost: BASE_FISH_COST,
+    growthMultiplier: 1,
+    minValueGain: 1,
+    maxValueGain: 3,
+  },
+  {
+    typeName: "Yellow",
+    cost: BASE_FISH_COST * 2,
+    growthMultiplier: .75,
+    minValueGain: 2,
+    maxValueGain: 4,
+  },
+  {
+    typeName: "Red",
+    cost: BASE_FISH_COST * 3,
+    growthMultiplier: .5,
+    minValueGain: 3,
+    maxValueGain: 5,
+  },
+];
+
+function getLuck(factors: (string | number)[], min?: number, max?: number) {
+  if (min && max) {
+    const minCeiled = Math.ceil(min);
+    const maxFloored = Math.floor(max);
+    return Math.floor(
+      luck(factors.toString()) * (maxFloored - minCeiled + 1) + minCeiled,
+    );
+  } else {
+    return luck(factors.toString());
+  }
 }
 
 class Cell {
@@ -153,9 +166,10 @@ class Cell {
 
   updateSunlight(day: number, seed: number) {
     // Randomly decide to increase or decrease sunlight, or keep it the same
-    const randChange =
-      luck([this.x, this.y, day, seed, "randchange"].toString()) < 0.5 ? -1 : 1;
-    const change = luck([this.x, this.y, day, seed, "realchange"].toString()) <
+    const randChange = getLuck([this.x, this.y, day, seed, "randchange"]) < 0.5
+      ? -1
+      : 1;
+    const change = getLuck([this.x, this.y, day, seed, "realchange"]) <
         SUNLIGHT_CHANGE_CHANCE
       ? 0
       : randChange;
@@ -195,13 +209,10 @@ class Cell {
 
         // Add a random amount of value for each growth level gained
         for (let i = 0; i < fish.growth - prevFishGrowth; i++) {
-          fish.value += Math.floor(
-            luck(
-                  [this.food, this.population.length, day, i, seed, "value"]
-                    .toString(),
-                ) *
-                (fish.type.maxValueGain - fish.type.minValueGain + 1) +
-              fish.type.minValueGain,
+          fish.value += getLuck(
+            [this.food, this.population.length, day, i, seed, "value"],
+            fish.type.minValueGain,
+            fish.type.maxValueGain,
           );
         }
       } else {
@@ -226,9 +237,7 @@ class Cell {
       for (let i = 0; i < pairs.length; i++) {
         for (let j = 0; j < pairs[i]; j++) {
           if (
-            luck(
-                [this.x, this.y, i, j, day, seed, "reproduction"].toString(),
-              ) <
+            getLuck([this.x, this.y, i, j, day, seed, "reproduction"]) <
               REPRODUCTION_CHANCE &&
             this.population.length < CELL_MAX_CAPACITY
           ) {
@@ -293,6 +302,10 @@ class Cell {
   }
 }
 
+function getRandomSeed(max: number) {
+  return Math.floor(Math.random() * max + 1);
+}
+
 class Grid {
   seed: number;
   rows: number;
@@ -330,10 +343,16 @@ class Grid {
   setInitialCellStats() {
     this.cells.forEach((row) =>
       row.forEach((cell) => {
-        const sSeed = [cell.x, cell.y, this.seed, "sun"].toString();
-        const fSeed = [cell.x, cell.y, this.seed, "food"].toString();
-        cell.sunlight = Math.floor(luck(sSeed) * CELL_MAX_SUNLIGHT) + 1;
-        cell.food = Math.floor(luck(fSeed) * CELL_MAX_FOOD) + 1;
+        cell.sunlight = getLuck(
+          [cell.x, cell.y, this.seed, "sun"],
+          1,
+          CELL_MAX_SUNLIGHT,
+        );
+        cell.food = getLuck(
+          [cell.x, cell.y, this.seed, "food"],
+          1,
+          CELL_MAX_FOOD,
+        );
       })
     );
     this.encode();
@@ -454,10 +473,6 @@ interface GameSave {
   gameStates: GameState[];
 }
 
-function getRandomSeed(max: number) {
-  return Math.floor(Math.random() * max + 1);
-}
-
 class GameManager {
   grid: Grid;
   player: Player;
@@ -497,7 +512,7 @@ class GameManager {
     this.clickedCell = this.grid.cells[0][0];
     this.player.move(0, 0);
     popup.style.display = "none"; // Remove popup when player goes to next level
-    updateHeader();
+    updateGameUI();
   }
 
   nextScenario() {
@@ -531,8 +546,6 @@ class GameManager {
     }));
     const savedState =
       this.currSave.gameStates[this.currSave.gameStates.length - 1];
-    // console.log("Restoring game state:");
-    // console.log(savedState);
     this.currState = {
       day: savedState.day,
       money: savedState.money,
@@ -566,8 +579,6 @@ class GameManager {
     };
     this.currSave.gameStates.push(gameState);
     this.saveToSlot("AutoSave");
-    // console.log("Current game states:");
-    // console.log(this.currSave.gameStates);
     if (clearRedos) {
       this.redoStates = [];
     }
@@ -632,7 +643,7 @@ class GameManager {
       })
     );
     this.currState.day++;
-    updateDayDisplay();
+    updateDayUI();
     this.autoSave(true); // Autosave at the end of each day
   }
 }
@@ -679,8 +690,9 @@ function handleKeyboardMovement(
   popup.style.display = "none"; // Remove popup when player moves using keyboard
 }
 
+// ------------------------------------ GAME SET-UP
 const gameManager = new GameManager();
-gameManager.setScenario();
+gameManager.setScenario(); // Set initial level
 createLanguageDropdown(); // Set up language options
 
 // Listen for player's keyboard movement
@@ -688,18 +700,71 @@ document.addEventListener("keydown", (e) => {
   handleKeyboardMovement(gameManager, e);
 });
 
-function updateObjective() {
-  // Check if the objective is reached
-  if (
-    gameManager.currState.money >= objectiveMoney && !gameManager.currState.won
-  ) {
-    gameManager.currState.won = true;
-    gameManager.currState.dayWon = gameManager.currState.day;
+function draw() {
+  // Set up canvas based on grid size
+  canvas.width = gameManager.grid.cols * CELL_SIZE + GRID_OFFSET;
+  canvas.height = gameManager.grid.rows * CELL_SIZE + GRID_OFFSET;
+  if (ctx) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    gameManager.grid.draw(ctx);
+    gameManager.player.draw(ctx);
+    requestAnimationFrame(draw);
   }
+}
+draw();
 
+// Look for an autosave and load it if approved
+if (localStorage.getItem("FishFarm_AutoSave")) {
+  if (confirm("Do you want to load the autosave?")) {
+    gameManager.loadFromSlot("AutoSave"); // Load the autosave
+  } else {
+    // Optional: Allow user to start fresh but keep the existing AutoSave
+    alert(
+      "Starting a new game. Autosave will overwrite existing autosave.",
+    );
+  }
+} else {
+  alert("No autosave found. Starting a new game.");
+  gameManager.autoSave(false); // Create the first autosave
+}
+
+// Handle click-to-move
+canvas.addEventListener("click", (event) => {
+  const rect = canvas.getBoundingClientRect();
+  const mouseX = event.x - rect.left;
+  const mouseY = event.y - rect.top;
+
+  const clickedCol = Math.floor(mouseX / CELL_SIZE);
+  const clickedRow = Math.floor(mouseY / CELL_SIZE);
+
+  gameManager.clickedCell = gameManager.grid.cells[clickedRow][clickedCol];
+  gameManager.player.move(clickedRow, clickedCol);
+  gameManager.clickedCell.updateInfoUI();
+  gameManager.clickedCell.updatePopupUI();
+
+  popup.style.left = `${event.x + 10}px`;
+  popup.style.top = `${event.y + 10}px`;
+  popup.style.display = "block";
+});
+
+// Listen for when to disable/update popup
+document.addEventListener("click", (event) => {
+  const element = event.target as HTMLElement;
+  // If the player clicks something that isn't the canvas or shop buttons, remove popup
+  if (
+    element != canvas && element.tagName != "BUTTON" && element.tagName != "H5"
+  ) {
+    popup.style.display = "none";
+  } else { // Otherwise, update the popup to reflect current state
+    gameManager.clickedCell.updatePopupUI();
+  }
+});
+// ------------------------------------ END GAME SET-UP
+
+function updateObjectiveUI() {
   // Dynamically update the objective display
   const objectivesDiv = document.querySelector<HTMLDivElement>("#objectives")!;
-  objectivesDiv.innerHTML = ""; // First lear objectives div
+  objectivesDiv.innerHTML = ""; // First clear objectives div
 
   // Create the objective title
   createHeading({
@@ -749,87 +814,27 @@ function updateObjective() {
   }
 }
 
+function updateObjective() {
+  // Check if the objective is reached
+  if (
+    gameManager.currState.money >= objectiveMoney && !gameManager.currState.won
+  ) {
+    gameManager.currState.won = true;
+    gameManager.currState.dayWon = gameManager.currState.day;
+  }
+  updateObjectiveUI();
+}
+
 function changeMoney(change: number) {
   // Update the money state
   gameManager.currState.money += change;
 
   // Dynamically refresh the money display in the header
-  updateMoneyDisplay();
+  updateMoneyUI();
 
   // Re-evaluate and update objectives
   updateObjective();
 }
-
-function draw() {
-  // Set up canvas based on grid size
-  canvas.width = gameManager.grid.cols * CELL_SIZE + GRID_OFFSET;
-  canvas.height = gameManager.grid.rows * CELL_SIZE + GRID_OFFSET;
-  if (ctx) {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    gameManager.grid.draw(ctx);
-    gameManager.player.draw(ctx);
-    requestAnimationFrame(draw);
-  }
-}
-draw();
-
-if (localStorage.getItem("FishFarm_AutoSave")) {
-  if (confirm("Do you want to load the autosave?")) {
-    gameManager.loadFromSlot("AutoSave"); // Load the autosave
-  } else {
-    // Optional: Allow user to start fresh but keep the existing AutoSave
-    alert(
-      "Starting a new game. Autosave will overwrite existing autosave.",
-    );
-  }
-} else {
-  alert("No autosave found. Starting a new game.");
-  gameManager.autoSave(false); // Create the first autosave
-}
-
-document.addEventListener("keydown", (event) => {
-  if (event.code === "Space") {
-    gameManager.nextDay();
-  }
-});
-
-function sellFish(cell: Cell, fish: Fish) {
-  changeMoney(fish.value);
-  const fishIndex = cell.population.indexOf(fish);
-  cell.population.splice(fishIndex, 1);
-  cell.updateInfoUI();
-  gameManager.autoSave(true); // Autosave when fish is sold
-}
-
-canvas.addEventListener("click", (event) => {
-  const rect = canvas.getBoundingClientRect();
-  const mouseX = event.x - rect.left;
-  const mouseY = event.y - rect.top;
-
-  const clickedCol = Math.floor(mouseX / CELL_SIZE);
-  const clickedRow = Math.floor(mouseY / CELL_SIZE);
-
-  gameManager.clickedCell = gameManager.grid.cells[clickedRow][clickedCol];
-  gameManager.player.move(clickedRow, clickedCol);
-  gameManager.clickedCell.updateInfoUI();
-  gameManager.clickedCell.updatePopupUI();
-
-  popup.style.left = `${event.x + 10}px`;
-  popup.style.top = `${event.y + 10}px`;
-  popup.style.display = "block";
-});
-
-document.addEventListener("click", (event) => {
-  const element = event.target as HTMLElement;
-  // If the player clicks something that isn't the canvas or shop buttons, remove popup
-  if (
-    element != canvas && element.tagName != "BUTTON" && element.tagName != "H5"
-  ) {
-    popup.style.display = "none";
-  } else { // Otherwise, update the popup to reflect current state
-    gameManager.clickedCell.updatePopupUI();
-  }
-});
 
 // Create a button container and style it
 const buttonContainer = document.createElement("div");
@@ -913,14 +918,14 @@ function createLanguageDropdown() {
   const savedLanguage = localStorage.getItem("language") || "en";
   dropdown.value = savedLanguage; // Set dropdown to the saved language
   setLanguage(savedLanguage); // Apply the saved language immediately
-  updateHeader(); // Update the header with the selected language
+  updateGameUI(); // Update UI with the selected language
 
   // Add an event listener for language changes
   dropdown.addEventListener("change", (event) => {
     const selectedCode = (event.target as HTMLSelectElement).value;
     setLanguage(selectedCode); // Update the current language setting
     localStorage.setItem("language", selectedCode); // Save the language preference
-    updateHeader(); // Dynamically update the header text
+    updateGameUI(); // Dynamically update the header text
     updateButtonsText(buttonContainer); // Refresh button texts
     createShop(); // Refresh shop button texts
   });
@@ -931,11 +936,9 @@ function createLanguageDropdown() {
 
 function updateHeader() {
   const headerDiv = document.querySelector<HTMLDivElement>("#header")!;
-  const objectivesDiv = document.querySelector<HTMLDivElement>("#objectives")!;
 
-  // Clear existing content in the header sections
+  // Clear existing content
   headerDiv.innerHTML = "";
-  objectivesDiv.innerHTML = "";
 
   // Update the game's main title
   createHeading({
@@ -967,9 +970,20 @@ function updateHeader() {
     size: "h2",
   });
   moneyDisplay.style.display = "inline";
+}
 
+function updateGameUI() {
+  updateHeader();
   createShop();
   updateObjective();
+}
+
+function sellFish(cell: Cell, fish: Fish) {
+  changeMoney(fish.value);
+  const fishIndex = cell.population.indexOf(fish);
+  cell.population.splice(fishIndex, 1);
+  cell.updateInfoUI();
+  gameManager.autoSave(true); // Autosave when fish is sold
 }
 
 function createFishButton(div: HTMLDivElement, fishType: FishType) {
@@ -985,7 +999,7 @@ function createFishButton(div: HTMLDivElement, fishType: FishType) {
     onClick: () => {
       if (gameManager.currState.money >= fishType.cost) {
         changeMoney(-fishType.cost);
-        updateMoneyDisplay();
+        updateMoneyUI();
         const currentCell = gameManager.grid
           .cells[gameManager.player.coords.row][
             gameManager.player.coords.col
@@ -1025,14 +1039,14 @@ function createShop() {
   });
 }
 
-function updateMoneyDisplay() {
+function updateMoneyUI() {
   const moneyDisplay = document.querySelector<HTMLHeadingElement>("#header h2");
   if (moneyDisplay) {
     moneyDisplay.textContent = `💵 ${gameManager.currState.money}`;
   }
 }
 
-function updateDayDisplay() {
+function updateDayUI() {
   const dayDisplay = document.querySelector<HTMLHeadingElement>("#header h3"); // Select the day display element from the header
   if (dayDisplay) {
     dayDisplay.textContent = `${getText("day")} ${gameManager.currState.day}`;
