@@ -4,6 +4,7 @@ import vue from '@vitejs/plugin-vue'
 import {VitePWA} from 'vite-plugin-pwa' 
 
 export default defineConfig({
+    base: '/CMPM-121-Final/',
     plugins: [
         vue(), 
         VitePWA({
@@ -27,7 +28,7 @@ export default defineConfig({
         }),
     ],
     build: {
-        outDir: '../wwwroot',
+        outDir: './wwwroot',
         emptyOutDir: true,
     },
     resolve: {
