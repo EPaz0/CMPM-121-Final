@@ -20,7 +20,8 @@ export default defineConfig({
                        
                     },
                 ],
-                start_url: "/",
+                start_url: "/CMPM-121-Final/",
+                scope: '/CMPM-121-Final/',
                 display: "standalone",
                 background_color: "#ffffff",
                 theme_color: "#4CAF50",
