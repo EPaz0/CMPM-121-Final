@@ -128,7 +128,7 @@ export class GameManager {
       );
       if (
         this.currState.day >= activationDay &&
-        this.currState.day <= activationDay + event.duration
+        this.currState.day < activationDay + event.duration
       ) {
         console.log(`event ${event.type.name} is active`);
         return event;
