@@ -90,7 +90,6 @@ function handleKeyboardMovement(
     gameManager.player.move(newRow, newCol);
   }
 
-  const newCell = gameManager.grid.cells[newRow][newCol];
   gameManager.uiManager.popup.style.display = "none"; // Remove popup when player moves using keyboard
 }
 

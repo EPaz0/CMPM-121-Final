@@ -75,7 +75,7 @@ export class UIManager {
     moneyDisplay.style.display = "inline";
 
     const specialEventDisplay = createHeading({
-      text: `Special Event: None`,
+      text: getText("specialEvent", { event: getText("none") }),
       div: headerDiv,
       size: "h3",
     });
@@ -142,7 +142,7 @@ export class UIManager {
         "#objectives",
       )!;
       createButton({
-        text: "Next Level",
+        text: getText("nextLevel"),
         div: objectivesDiv,
         onClick: () => {
           this.gameManager.nextScenario();

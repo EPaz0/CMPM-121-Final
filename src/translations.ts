@@ -10,6 +10,10 @@ export type TranslationKeys =
   | "buy"
   | "sell"
   | "noFishInCell"
+  | "specialEvent"
+  | "none"
+  | "heatwave"
+  | "storm"
   | "cell"
   | "sunlight"
   | "food"
@@ -18,6 +22,7 @@ export type TranslationKeys =
   | "wonText"
   | "loseText"
   | "gameWon"
+  | "nextLevel"
   | "saveGame"
   | "loadGame"
   | "listSaveSlots"
@@ -55,6 +60,12 @@ export const translations: Record<
     fish: "Fish",
     noFishInCell: "No fish in this cell.",
 
+    // Special Event
+    specialEvent: "Special Event: {{event}}",
+    none: "None",
+    heatwave: "Heatwave",
+    storm: "Storm",
+
     // Cell Info
     cell: "Cell",
     sunlight: "☀️ Sunlight",
@@ -66,6 +77,7 @@ export const translations: Record<
     wonText: "You won in {{days}} days!",
     loseText: "Game Over!",
     gameWon: "Congratulations! You completed the game!",
+    nextLevel: "Next Level",
 
     // Save/Load Buttons
     saveGame: "Save Game",
@@ -105,6 +117,12 @@ export const translations: Record<
     fish: "Pez",
     noFishInCell: "No hay peces en esta celda.",
 
+    // Special Event
+    specialEvent: "Evento especial: {{event}}",
+    none: "Ninguno",
+    heatwave: "Ola de calor",
+    storm: "Tormenta",
+
     // Cell Info
     cell: "Celda",
     sunlight: "☀️ Sol",
@@ -116,6 +134,7 @@ export const translations: Record<
     wonText: "¡Ganaste en {{days}} días!",
     loseText: "¡Fin del juego!",
     gameWon: "¡Felicidades! ¡Has completado el juego!",
+    nextLevel: "Siguiente nivel",
 
     // Save/Load Buttons
     saveGame: "Guardar Partida",
@@ -158,6 +177,12 @@ export const translations: Record<
     fish: "سمكة",
     noFishInCell: "لا يوجد أسماك في هذه الخلية.",
 
+    // Special Event
+    specialEvent: "حدث خاص: {{event}}",
+    none: "اي",
+    heatwave: "موجة الحر",
+    storm: "عاصفة",
+
     // Cell Info
     cell: "خلية",
     sunlight: "☀️ الشمس",
@@ -169,6 +194,7 @@ export const translations: Record<
     wonText: "فزت في {{days}} يومًا!",
     loseText: "انتهت اللعبة!",
     gameWon: "مبروك! لقد أكملت اللعبة!",
+    nextLevel: "المستوى التالي",
 
     // Save/Load Buttons
     saveGame: "حفظ اللعبة",

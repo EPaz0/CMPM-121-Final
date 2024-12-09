@@ -5,6 +5,13 @@ import { Fish, FishTypeName } from "./fish.ts";
 import { getText } from "./i18nHelper.ts";
 import { UIManager } from "./ui-manager.ts";
 import { STARTING_MONEY } from "./game-config.ts";
+import {
+  createSpecialEffects,
+  SpecialEffects,
+  SpecialEvent,
+  SpecialEventOutline,
+  SpecialEventTypes,
+} from "./special-events.ts";
 
 // Get scenarios from JSON file (converted from YAML file)
 import scenariosJSON from "./scenarios.json" with { type: "json" };
@@ -21,6 +28,7 @@ export interface Scenario {
   objectiveMoney: number;
   gridSize: { rows: number; cols: number };
   availableFishTypes: FishTypeName[];
+  specialEvents: SpecialEvent[];
 }
 
 function createScenario(index: number): Scenario {
@@ -30,11 +38,21 @@ function createScenario(index: number): Scenario {
     cols: scenarios[index].grid_size[1],
   };
   const availableFishTypes = scenarios[index].available_fish_types.slice();
+  const specialEvents = Array.from(
+    scenarios[index],
+    (event: SpecialEventOutline) => ({
+      activationDay: event[0],
+      type: SpecialEventTypes[event[1]],
+      duration: event[2],
+    }),
+  );
+
   return {
     index: index,
     objectiveMoney: objectiveMoney,
     gridSize: gridSize,
     availableFishTypes: availableFishTypes,
+    specialEvents: specialEvents,
   };
 }
 
@@ -77,6 +95,7 @@ export class GameManager {
   currState: GameState;
   redoStates: GameState[]; // Array of game states that can be re-instantiated
   uiManager: UIManager;
+  specialEffects: SpecialEffects;
 
   constructor() {
     this.scenario = createScenario(0);
@@ -91,6 +110,7 @@ export class GameManager {
     this.currState = createGameState(this.grid, 0);
     this.redoStates = [];
     this.uiManager = new UIManager(this);
+    this.specialEffects = createSpecialEffects();
   }
 
   setScenario() {
@@ -111,6 +131,7 @@ export class GameManager {
       this.currState.day,
       this.currState.money,
     );
+    // TODO: Check if special event active
 
     this.uiManager.updateGameUI();
   }
