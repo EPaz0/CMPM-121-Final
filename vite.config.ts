@@ -3,11 +3,10 @@ import {defineConfig} from 'vite'
 import vue from '@vitejs/plugin-vue'
 import {VitePWA} from 'vite-plugin-pwa' 
 export default defineConfig({
+    base: '/CMPM-121-Final/',
     plugins: [
         vue(), 
         VitePWA({
-            base: '/CMPM-121-Final/',
-            
             manifest: {
                 name: "Fish Farm",
                 short_name: "FishFarm",
