@@ -205,7 +205,7 @@ export class UIManager {
       size: "h5",
     });
 
-    createButton({
+    const fishButton = createButton({
       text: `${getText("buy")} ${getText(fishType.name)} ${getText("fish")}`, // Use translated "Buy X Fish"
       div: div,
       onClick: () => {
@@ -219,7 +219,9 @@ export class UIManager {
           gameManager.autoSave(true); // Autosave when fish is bought
         }
       },
-    }).append(costDisplay);
+    });
+    fishButton.append(costDisplay);
+    fishButton.title = getText(`${fishType.name}FishDescription`);
   }
 
   createShop() {

@@ -36,7 +36,10 @@ export type TranslationKeys =
   | "availableSlots"
   | "Red"
   | "Green"
-  | "Yellow";
+  | "Yellow"
+  | "GreenFishDescription"
+  | "YellowFishDescription"
+  | "RedFishDescription";
 
 export type LanguageCode = "en" | "es" | "ar";
 
@@ -100,6 +103,14 @@ export const translations: Record<
     Red: "Red",
     Green: "Green",
     Yellow: "Yellow",
+
+    // Fish Descriptions
+    GreenFishDescription:
+      "Green fish like living in groups of their own kind and do not tolerate extreme sunlight.",
+    YellowFishDescription:
+      "Yellow fish like high sunlight and living with fish of other kinds.",
+    RedFishDescription:
+      "Red fish like low sunlight and do not tolerate their own kind.",
   },
   es: {
     // Titles & Main UI
@@ -160,6 +171,14 @@ export const translations: Record<
     Red: "Rojo",
     Green: "Verde",
     Yellow: "Amarillo",
+
+    // Fish Descriptions
+    GreenFishDescription:
+      "A los peces verdes les gusta vivir en grupos de su propia especie y no toleran la luz solar extrema.",
+    YellowFishDescription:
+      "A los peces amarillos les gusta la luz del sol y convivir con peces de otros tipos.",
+    RedFishDescription:
+      "A los peces rojos les gusta la luz solar baja y no toleran a los de su propia especie.",
   },
   ar: {
     // Titles & Main UI
@@ -217,5 +236,13 @@ export const translations: Record<
     Red: "أحمر",
     Green: "أخضر",
     Yellow: "أصفر",
+
+    // Fish Descriptions
+    GreenFishDescription:
+      "تحب الأسماك الخضراء العيش في مجموعات من نوعها ولا تتسامح مع أشعة الشمس الشديدة.",
+    YellowFishDescription:
+      "الأسماك الصفراء مثل أشعة الشمس العالية وتعيش مع الأسماك من أنواع أخرى.",
+    RedFishDescription:
+      "الأسماك الحمراء تحب ضوء الشمس المنخفض ولا تتسامح مع نوعها.",
   },
 };
