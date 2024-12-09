@@ -47,6 +47,7 @@ We changed our random generation to be deterministic, so that undoing and redoin
 ### F1.a
 ```
 Byte Array Layout:
+![F1.a data structure diagram](./byte.jpg)
 -----------------------------------------------------
 | Cell(0,0) | Cell(0,1) | Cell(1,0) | Cell(1,1) ... |
 -----------------------------------------------------
