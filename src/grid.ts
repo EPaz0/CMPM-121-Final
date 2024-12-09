@@ -80,9 +80,9 @@ export class Grid {
         for (let i = 0; i < CELL_MAX_CAPACITY; i++) {
           if (i < cell.details.population.length) {
             const fish = cell.details.population[i];
-            this.state[index++] = fish.type.typeName === "Green"
+            this.state[index++] = fish.type.name === "Green"
               ? 0
-              : fish.type.typeName === "Yellow"
+              : fish.type.name === "Yellow"
               ? 1
               : 2;
             this.state[index++] = fish.growth;

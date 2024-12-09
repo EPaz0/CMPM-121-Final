@@ -1,27 +1,32 @@
-import { Fish, FishType, FishTypeName, fishTypes } from "./fish.ts";
+import {
+  Fish,
+  FishContext,
+  FishTypeName,
+  fishTypes,
+  InternalFishType,
+} from "./fish.ts";
 import { getLuck } from "./utils.ts";
 import {
-  CAPACITY_PENALTY,
-  CELL_CAPACITY_THRESHOLD,
   CELL_MAX_CAPACITY,
   CELL_MAX_FOOD,
   CELL_MAX_SUNLIGHT,
   CELL_SIZE,
-  FISH_MAX_FOOD,
-  FISH_MAX_GROWTH,
+  FISH_MATURE_GROWTH,
   REPRODUCTION_CHANCE,
   SUNLIGHT_CHANGE_CHANCE,
 } from "./game-config.ts";
+import { GameManager } from "./game-manager.ts";
 
-// Returns an array of a certain type of fish in a given cell
-function getFishOfType(cellDetails: CellDetails, typeName: FishTypeName) {
-  const fish: Fish[] = [];
+// Returns an array mature fish of a certain type in a certain cell
+function getMatureFishOfType(cellDetails: CellDetails, typeName: FishTypeName) {
+  const matureFish: Fish[] = [];
   for (let i = 0; i < cellDetails.population.length; i++) {
-    if (cellDetails.population[i].type.typeName == typeName) {
-      fish.push(cellDetails.population[i]);
+    const fish = cellDetails.population[i];
+    if (fish.type.name == typeName && fish.growth >= FISH_MATURE_GROWTH) {
+      matureFish.push(cellDetails.population[i]);
     }
   }
-  return fish;
+  return matureFish;
 }
 
 interface CellState {
@@ -102,56 +107,17 @@ export class Cell {
     ); // Food is proportional to sunlight
   }
 
-  updateFishGrowth(day: number, seed: number) {
+  updateFish(gameManager: GameManager) {
     this.details.population.forEach((fish) => {
-      if (this.details.state.food > 0) {
-        fish.food = Math.min(FISH_MAX_FOOD, fish.food + 1); // Fish food level capped at 3
-        this.details.state.food--;
-
-        // Growth depends on fish type, food level, and amount of fish in cell
-        const fishOverThreshold = this.details.population.length -
-          CELL_CAPACITY_THRESHOLD;
-        // Max growth goes down for every fish over the maximum cell capacity
-        const maxGrowth = fishOverThreshold > 0
-          ? Math.max(
-            0,
-            FISH_MAX_GROWTH - fishOverThreshold * CAPACITY_PENALTY,
-          )
-          : FISH_MAX_GROWTH;
-        const growthRate = fish.type.growthMultiplier;
-        const prevFishGrowth = fish.growth;
-        if (prevFishGrowth < maxGrowth) {
-          fish.growth += fish.food * growthRate;
-          fish.growth = Math.min(maxGrowth, fish.growth);
-        }
-
-        // Add a random amount of value for each growth level gained
-        for (let i = 0; i < fish.growth - prevFishGrowth; i++) {
-          fish.value += getLuck(
-            [
-              this.details.state.food,
-              this.details.population.length,
-              day,
-              i,
-              seed,
-              "value",
-            ],
-            fish.type.minValueGain,
-            fish.type.maxValueGain,
-          );
-        }
-      } else {
-        // If no food, fish dies
-        fish.food -= 1;
-        if (fish.food < 0) {
-          const index = this.details.population.indexOf(fish);
-          this.details.population.splice(index, 1);
-        }
-      }
+      const ctx: FishContext = { fish: fish, cell: this.details };
+      const prevGrowth = fish.growth;
+      fish.type.eat(ctx);
+      fish.type.grow(ctx);
+      fish.type.calculateValue(ctx, gameManager, prevGrowth);
     });
   }
 
-  addFish(type: FishType, num: number) {
+  addFish(type: InternalFishType, num: number) {
     for (let i = 0; i < num; i++) {
       const fish = {
         type: type,
@@ -166,10 +132,16 @@ export class Cell {
   updatePopulation(day: number, seed: number) {
     if (this.details.population.length >= 2 && this.details.state.food > 0) {
       const pairs = [];
-      // Number of pairs for each kind of fish
-      pairs.push(Math.floor(getFishOfType(this.details, "Green").length / 2));
-      pairs.push(Math.floor(getFishOfType(this.details, "Yellow").length / 2));
-      pairs.push(Math.floor(getFishOfType(this.details, "Red").length / 2));
+      // Get the number of pairs of mature fish for each type
+      pairs.push(
+        Math.floor(getMatureFishOfType(this.details, "Green").length / 2),
+      );
+      pairs.push(
+        Math.floor(getMatureFishOfType(this.details, "Yellow").length / 2),
+      );
+      pairs.push(
+        Math.floor(getMatureFishOfType(this.details, "Red").length / 2),
+      );
       // Loop through number of pairs for each kind of fish to determine who reproduces
       for (let i = 0; i < pairs.length; i++) {
         for (let j = 0; j < pairs[i]; j++) {

@@ -91,7 +91,6 @@ function handleKeyboardMovement(
   }
 
   const newCell = gameManager.grid.cells[newRow][newCol];
-  gameManager.uiManager.updateInfoUI(newCell);
   gameManager.uiManager.popup.style.display = "none"; // Remove popup when player moves using keyboard
 }
 
@@ -111,7 +110,6 @@ canvas.addEventListener("click", (event) => {
 
   gameManager.clickedCell = gameManager.grid.cells[clickedRow][clickedCol];
   gameManager.player.move(clickedRow, clickedCol);
-  gameManager.uiManager.updateInfoUI(gameManager.clickedCell);
   gameManager.uiManager.updatePopupUI(gameManager.clickedCell);
 
   gameManager.uiManager.popup.style.left = `${event.x + 10}px`;

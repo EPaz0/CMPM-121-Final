@@ -17,6 +17,7 @@ for (const key in scenariosJSON) {
 
 // Scenario values
 export interface Scenario {
+  index: number;
   objectiveMoney: number;
   gridSize: { rows: number; cols: number };
   availableFishTypes: FishTypeName[];
@@ -30,6 +31,7 @@ function createScenario(index: number): Scenario {
   };
   const availableFishTypes = scenarios[index].available_fish_types.slice();
   return {
+    index: index,
     objectiveMoney: objectiveMoney,
     gridSize: gridSize,
     availableFishTypes: availableFishTypes,
@@ -92,9 +94,15 @@ export class GameManager {
   }
 
   setScenario() {
-    // Rebuild grid with correct size for given scenario
-    this.scenario = createScenario(this.currState.scenarioIndex);
-    this.grid = new Grid(this.scenario.gridSize);
+    // Rebuild grid with correct size for given scenario if it is different
+    if (this.scenario.index != this.currState.scenarioIndex) {
+      this.scenario = createScenario(this.currState.scenarioIndex);
+      this.grid = new Grid(this.scenario.gridSize);
+      // Reset the clicked cell
+      this.clickedCell = this.grid.cells[0][0];
+      this.player.move(0, 0);
+      this.uiManager.popup.style.display = "none"; // Remove popup when player goes to next level
+    }
     this.grid.seed = this.currSave.seed;
     this.grid.setInitialCellStats();
     this.currState = createGameState(
@@ -103,10 +111,7 @@ export class GameManager {
       this.currState.day,
       this.currState.money,
     );
-    // Reset the clicked cell
-    this.clickedCell = this.grid.cells[0][0];
-    this.player.move(0, 0);
-    this.uiManager.popup.style.display = "none"; // Remove popup when player goes to next level
+
     this.uiManager.updateGameUI();
   }
 
@@ -231,10 +236,9 @@ export class GameManager {
     this.grid.cells.forEach((row) =>
       row.forEach((cell) => {
         cell.updateFood();
-        cell.updateFishGrowth(this.currState.day, this.currSave.seed);
+        cell.updateFish(this);
         cell.updatePopulation(this.currState.day, this.currSave.seed);
         cell.updateSunlight(this.currState.day, this.currSave.seed);
-        this.uiManager.updateInfoUI(cell);
       })
     );
     this.currState.day++;
@@ -268,7 +272,6 @@ export class GameManager {
   sellFish(cell: Cell, fish: Fish) {
     this.changeMoney(fish.value);
     cell.removeFish(fish);
-    this.uiManager.updateInfoUI(cell);
     this.autoSave(true); // Autosave when fish is sold
   }
 }

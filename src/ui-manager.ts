@@ -1,7 +1,7 @@
 import { getText } from "./i18nHelper.ts";
 import { GameManager } from "./game-manager.ts";
 import { createButton, createHeading } from "./utils.ts";
-import { FishType, FishTypeName, fishTypes } from "./fish.ts";
+import { FishTypeName, fishTypes, InternalFishType } from "./fish.ts";
 import { Scenario, scenarios } from "./game-manager.ts";
 import { Cell } from "./cell.ts";
 import { fishToString } from "./fish.ts";
@@ -73,6 +73,13 @@ export class UIManager {
       size: "h2",
     });
     moneyDisplay.style.display = "inline";
+
+    const specialEventDisplay = createHeading({
+      text: `Special Event: None`,
+      div: headerDiv,
+      size: "h3",
+    });
+    specialEventDisplay.style.marginBottom = "0px";
   }
 
   updateMoneyUI(money: number) {
@@ -154,31 +161,6 @@ export class UIManager {
     }
   }
 
-  updateInfoUI(cell: Cell) {
-    const cellInfoDiv = document.getElementById("cell-info");
-    if (cellInfoDiv) {
-      // Display the localized info for the current cell
-      cellInfoDiv.innerText = `${
-        getText("cell")
-      } (${this.gameManager.player.coords.row}, ${this.gameManager.player.coords.col})
-      ${getText("sunlight")}: ${cell.details.state.sunlight}
-      ${getText("food")}: ${cell.details.state.food}
-      ${getText("fish")}: ${cell.details.population.length}`;
-
-      // If the cell has a population, append localized details about its fish
-      if (cell.details.population.length > 0) {
-        cell.details.population.forEach((fish) => {
-          const localizedFish = `${getText(fish.type.typeName)} ${
-            getText("fish")
-          } | ${getText("growth")}: ${fish.growth}/${FISH_MAX_GROWTH}, ${
-            getText("food")
-          }: ${fish.food}/${FISH_MAX_FOOD}, ${getText("value")}: ${fish.value}`;
-          cellInfoDiv.innerText += `\n${localizedFish}`;
-        });
-      }
-    }
-  }
-
   updatePopupUI(cell: Cell) {
     this.popup.innerHTML = "";
 
@@ -210,7 +192,7 @@ export class UIManager {
   createFishButton(
     gameManager: GameManager,
     div: HTMLDivElement,
-    fishType: FishType,
+    fishType: InternalFishType,
   ) {
     const costDisplay = createHeading({
       text: `💵 ${fishType.cost}`,
@@ -219,9 +201,7 @@ export class UIManager {
     });
 
     createButton({
-      text: `${getText("buy")} ${getText(fishType.typeName)} ${
-        getText("fish")
-      }`, // Use translated "Buy X Fish"
+      text: `${getText("buy")} ${getText(fishType.name)} ${getText("fish")}`, // Use translated "Buy X Fish"
       div: div,
       onClick: () => {
         if (gameManager.currState.money >= fishType.cost) {
@@ -231,7 +211,6 @@ export class UIManager {
               gameManager.player.coords.col
             ];
           currentCell.addFish(fishType, 1);
-          this.updateInfoUI(currentCell);
           gameManager.autoSave(true); // Autosave when fish is bought
         }
       },
@@ -252,7 +231,7 @@ export class UIManager {
 
     // Dynamically add fish buttons and costs
     fishTypes.forEach((fishType) => {
-      if (fishTypeIsAvailable(this.gameManager.scenario, fishType.typeName)) {
+      if (fishTypeIsAvailable(this.gameManager.scenario, fishType.name)) {
         this.createFishButton(this.gameManager, shopDiv, fishType);
       }
     });
