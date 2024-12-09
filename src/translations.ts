@@ -10,6 +10,7 @@ export type TranslationKeys =
   | "buy"
   | "sell"
   | "noFishInCell"
+  | "overcrowded"
   | "specialEvent"
   | "none"
   | "heatwave"
@@ -62,6 +63,7 @@ export const translations: Record<
     sell: "Sell",
     fish: "Fish",
     noFishInCell: "No fish in this cell.",
+    overcrowded: "⚠️Overcrowded⚠️",
 
     // Special Event
     specialEvent: "Special Event: {{event}}",
@@ -127,6 +129,7 @@ export const translations: Record<
     sell: "Vender",
     fish: "Pez",
     noFishInCell: "No hay peces en esta celda.",
+    overcrowded: "⚠️Superpoblado⚠️",
 
     // Special Event
     specialEvent: "Evento especial: {{event}}",
@@ -195,6 +198,7 @@ export const translations: Record<
     sell: "بيع",
     fish: "سمكة",
     noFishInCell: "لا يوجد أسماك في هذه الخلية.",
+    overcrowded: "⚠️مكتظه⚠️",
 
     // Special Event
     specialEvent: "حدث خاص: {{event}}",

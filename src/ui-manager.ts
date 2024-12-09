@@ -5,6 +5,7 @@ import { FishTypeName, fishTypes, InternalFishType } from "./fish.ts";
 import { Scenario, scenarios } from "./game-manager.ts";
 import { Cell } from "./cell.ts";
 import { fishToString } from "./fish.ts";
+import { CELL_CAPACITY_THRESHOLD } from "./game-config.ts";
 
 function createPopup(): HTMLDivElement {
   const popup = document.createElement("div");
@@ -170,6 +171,13 @@ export class UIManager {
     this.popup.innerHTML = "";
 
     if (cell.details.population.length > 0) {
+      if (cell.details.population.length > CELL_CAPACITY_THRESHOLD) {
+        createHeading({
+          text: getText("overcrowded"),
+          div: this.popup,
+          size: "h3",
+        }).style.margin = "0px";
+      }
       cell.details.population.forEach((fish) => {
         createHeading({
           text: fishToString(fish), // Add localization to fishToString separately if necessary
