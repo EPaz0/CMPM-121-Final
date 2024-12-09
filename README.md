@@ -75,13 +75,20 @@ F[0],F[1],F[2] - No changes
 
 ## How we satisfied the software requirements
 -[F3.a] The game must be internationalized in way that allows all text visible to the player to be translated into different written languages (i.e. there are no messages that are hard-coded to display only English-language text, but it is fine for this requirement if English is the only supported display language).
+
 For this step, we created a seperate ts file with a Record that used a key word and returned a string. We then made a helper file, which had a getText function, that would use the translation file and return the apporiate string via text.replace. In our ui-manager, we changed the instances where we just outputted text and instead used the getText function to get the text. 
+
 -[F3.b] The game must be localized to support three different written languages. At least one language must use a logographic script, and at least one language must use a right-to-left script.
+
 We added a UI dropdown menu that allowed the user to select a language. Our helper file has a variable that tracks the langauge and returns the approraite language from our translation file. We chose English, Spanish, and Arabic for our supported languages. While we knew Spanish, we mostly relied on Brace to provide the list of translations for us, especially since none of us know how to read or type Aracbic. 
+
 -[F3.c] The game must be installable on a smartphone-class mobile device in the sense that there is a way to get it to show up as a home-screen icon that feels similar to other installed apps.
+
 We got the game to be installable by changing to just using vite instead of deno and also using PWA.
 Followed this video https://www.youtube.com/watch?v=YSGLw4T8BgQ&t=458s
+
 -[F3.d] Once installed in a mobile device, the game can be launched and satisfactorily played even when the device is not connected to the internet.
+
 For ui changes I had to split up some of the button to sepearte containers and also add more space inbetween them horizontally.
 No changes were needed for offline play.
 
