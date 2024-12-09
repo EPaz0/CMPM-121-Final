@@ -2,9 +2,9 @@
 
 # Devlog Entry - 11/13/24
 ## Introducing the team
-Tools Lead: Enrique Paz
-Engine Lead: Raul Mojarro
-Design Lead: Lyle Watkins
+- Tools Lead: Enrique Paz
+- Engine Lead: Raul Mojarro
+- Design Lead: Lyle Watkins
 
 ## Tools and materials
 We are going to be using TypeScript and the baseline web platform because they are things we have been using and are class and familiar to us right now. We will be using VSCode for our IDE because it’s easy to use and we are most familiar with it. Lyle will use Procreate to create visual assets because it has a built-in animation editor and they have been using it for years. Our alternate platform choice is PixiJS and we chose it because we don't like Phaser and want to try something new.
