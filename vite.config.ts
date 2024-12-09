@@ -14,7 +14,7 @@ export default defineConfig({
                 description: "A fun fish farming game!",
                 icons: [
                     {
-                        src: "/icons/fish.png",
+                        src: "/CMPM-121-Final//icons/fish.png",
                         sizes: "512x512",
                         type: "image/png",
                        
