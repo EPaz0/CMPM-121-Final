@@ -2,15 +2,14 @@ import { CELL_MAX_SUNLIGHT } from "./game-config.ts";
 import { UIManager } from "./ui-manager.ts";
 
 type SpecialEventTypeName =
-  | "Heatwave"
-  | "Storm"
-  | "Baby Boom"
-  | "Parasite Outbreak";
+  | "heatwave"
+  | "storm";
 
 interface SpecialEventType {
-  typeName: SpecialEventTypeName;
+  name: SpecialEventTypeName;
   effects: SpecialEffects;
-  onActive: (effects: SpecialEffects, uiManager: UIManager) => void;
+  activate: (effects: SpecialEffects, uiManager: UIManager) => void;
+  deactivate: (effects: SpecialEffects, uiManager: UIManager) => void;
 }
 
 export type SpecialEventOutline = [number, string, number];
@@ -24,18 +23,18 @@ export interface SpecialEvent {
 export interface SpecialEffects {
   minSunlight: number;
   maxSunlight: number;
-  reproductionBoost: number;
-  deathChance: number;
+  reproductionModifier: number;
 }
 
 export function createSpecialEffects(): SpecialEffects {
   return {
     minSunlight: 1,
     maxSunlight: CELL_MAX_SUNLIGHT,
-    reproductionBoost: 0,
-    deathChance: 0,
+    reproductionModifier: 0,
   };
 }
+
+const defaultSpecialEffects: SpecialEffects = createSpecialEffects();
 
 function changeSpecialEffects(
   effects: SpecialEffects,
@@ -43,40 +42,44 @@ function changeSpecialEffects(
 ) {
   effects.minSunlight = newEffects.minSunlight;
   effects.maxSunlight = newEffects.maxSunlight;
-  effects.reproductionBoost = newEffects.reproductionBoost;
-  effects.deathChance = newEffects.deathChance;
+  effects.reproductionModifier = newEffects.reproductionModifier;
 }
 
-const SpecialEventEffects = {
+const SpecialEventEffects: { [key: string]: SpecialEffects } = {
   heatwave: {
     minSunlight: 8,
     maxSunlight: CELL_MAX_SUNLIGHT,
-    reproductionBoost: 0.1,
-    deathChance: 0,
+    reproductionModifier: 0.2,
   },
   storm: {
     minSunlight: 1,
     maxSunlight: 4,
-    reproductionBoost: 0,
-    deathChance: 0,
+    reproductionModifier: -0.2,
   },
 };
 
+function deactivateSpecialEvent(effects: SpecialEffects, uiManager: UIManager) {
+  changeSpecialEffects(effects, defaultSpecialEffects);
+  uiManager.updateHeader();
+}
+
 export const SpecialEventTypes: { [key: string]: SpecialEventType } = {
   heatwave: {
-    typeName: "Heatwave",
+    name: "heatwave",
     effects: SpecialEventEffects.heatwave,
-    onActive: (effects: SpecialEffects, uiManager: UIManager) => {
+    activate: (effects: SpecialEffects, uiManager: UIManager) => {
       changeSpecialEffects(effects, SpecialEventEffects.heatwave);
       uiManager.updateHeader();
     },
+    deactivate: deactivateSpecialEvent,
   },
   storm: {
-    typeName: "Storm",
+    name: "storm",
     effects: SpecialEventEffects.storm,
-    onActive: (effects: SpecialEffects, uiManager: UIManager) => {
+    activate: (effects: SpecialEffects, uiManager: UIManager) => {
       changeSpecialEffects(effects, SpecialEventEffects.storm);
       uiManager.updateHeader();
     },
+    deactivate: deactivateSpecialEvent,
   },
 };

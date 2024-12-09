@@ -12,7 +12,7 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "node src/convert-yaml.js && vite build",
     "preview": "vite preview",
     "deploy": "gh-pages -d wwwroot"
   }

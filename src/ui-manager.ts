@@ -5,7 +5,6 @@ import { FishTypeName, fishTypes, InternalFishType } from "./fish.ts";
 import { Scenario, scenarios } from "./game-manager.ts";
 import { Cell } from "./cell.ts";
 import { fishToString } from "./fish.ts";
-import { FISH_MAX_FOOD, FISH_MAX_GROWTH } from "./game-config.ts";
 
 function createPopup(): HTMLDivElement {
   const popup = document.createElement("div");
@@ -74,8 +73,14 @@ export class UIManager {
     });
     moneyDisplay.style.display = "inline";
 
+    let specialEventText = getText("specialEvent", { event: getText("none") });
+    if (this.gameManager.activeEvent) {
+      specialEventText = getText("specialEvent", {
+        event: getText(this.gameManager.activeEvent.type.name),
+      });
+    }
     const specialEventDisplay = createHeading({
-      text: getText("specialEvent", { event: getText("none") }),
+      text: specialEventText,
       div: headerDiv,
       size: "h3",
     });

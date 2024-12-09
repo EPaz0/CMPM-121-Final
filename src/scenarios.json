@@ -7,7 +7,14 @@
     "available_fish_types": [
       "Green"
     ],
-    "objective": 250
+    "objective": 250,
+    "special_events": [
+      [
+        3,
+        "heatwave",
+        3
+      ]
+    ]
   },
   "level1": {
     "grid_size": [

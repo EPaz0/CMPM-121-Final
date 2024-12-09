@@ -9,7 +9,6 @@ import { getLuck } from "./utils.ts";
 import {
   CELL_MAX_CAPACITY,
   CELL_MAX_FOOD,
-  CELL_MAX_SUNLIGHT,
   CELL_SIZE,
   FISH_MATURE_GROWTH,
   REPRODUCTION_CHANCE,
@@ -84,7 +83,11 @@ export class Cell {
     );
   }
 
-  updateSunlight(day: number, seed: number) {
+  updateSunlight(gameManager: GameManager) {
+    const day = gameManager.currState.day;
+    const seed = gameManager.currSave.seed;
+    const sunMin = gameManager.specialEffects.minSunlight;
+    const sunMax = gameManager.specialEffects.maxSunlight;
     // Randomly decide to increase or decrease sunlight, or keep it the same
     const randChange = getLuck([this.x, this.y, day, seed, "randchange"]) < 0.5
       ? -1
@@ -93,10 +96,10 @@ export class Cell {
         SUNLIGHT_CHANGE_CHANCE
       ? 0
       : randChange;
-    // Ensure sunlight is between 1 and maximum
+    // Ensure sunlight is between minimum and maximum
     this.details.state.sunlight = Math.max(
-      1,
-      Math.min(CELL_MAX_SUNLIGHT, this.details.state.sunlight + change),
+      sunMin,
+      Math.min(sunMax, this.details.state.sunlight + change),
     );
   }
 
@@ -129,7 +132,9 @@ export class Cell {
     }
   }
 
-  updatePopulation(day: number, seed: number) {
+  updatePopulation(gameManager: GameManager) {
+    const day = gameManager.currState.day;
+    const seed = gameManager.currSave.seed;
     if (this.details.population.length >= 2 && this.details.state.food > 0) {
       const pairs = [];
       // Get the number of pairs of mature fish for each type
@@ -147,7 +152,8 @@ export class Cell {
         for (let j = 0; j < pairs[i]; j++) {
           if (
             getLuck([this.x, this.y, i, j, day, seed, "reproduction"]) <
-              REPRODUCTION_CHANCE &&
+              (REPRODUCTION_CHANCE +
+                gameManager.specialEffects.reproductionModifier) &&
             this.details.population.length < CELL_MAX_CAPACITY
           ) {
             this.addFish(fishTypes[i], 1); // 50% chance of adding one fish per pair

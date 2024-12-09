@@ -39,7 +39,7 @@ function createScenario(index: number): Scenario {
   };
   const availableFishTypes = scenarios[index].available_fish_types.slice();
   const specialEvents = Array.from(
-    scenarios[index],
+    scenarios[index].special_events,
     (event: SpecialEventOutline) => ({
       activationDay: event[0],
       type: SpecialEventTypes[event[1]],
@@ -63,6 +63,7 @@ interface GameState {
   dayWon: number;
   gridState: number[];
   scenarioIndex: number;
+  initialScenarioDay: number;
 }
 
 function createGameState(
@@ -70,6 +71,7 @@ function createGameState(
   scenarioIndex: number,
   day?: number,
   money?: number,
+  initDay?: number,
 ) {
   return {
     day: day != undefined ? day : 0,
@@ -78,6 +80,7 @@ function createGameState(
     dayWon: 0,
     gridState: Array.from(grid.state),
     scenarioIndex: scenarioIndex,
+    initialScenarioDay: initDay != undefined ? initDay : 0,
   };
 }
 
@@ -95,6 +98,7 @@ export class GameManager {
   currState: GameState;
   redoStates: GameState[]; // Array of game states that can be re-instantiated
   uiManager: UIManager;
+  activeEvent: SpecialEvent | null;
   specialEffects: SpecialEffects;
 
   constructor() {
@@ -110,7 +114,40 @@ export class GameManager {
     this.currState = createGameState(this.grid, 0);
     this.redoStates = [];
     this.uiManager = new UIManager(this);
+    this.activeEvent = null;
     this.specialEffects = createSpecialEffects();
+  }
+
+  getActiveSpecialEvent(): SpecialEvent | null {
+    for (let i = 0; i < this.scenario.specialEvents.length; i++) {
+      const event = this.scenario.specialEvents[i];
+      const activationDay = this.currState.initialScenarioDay +
+        event.activationDay;
+      console.log(
+        `Initial scenario day: ${this.currState.initialScenarioDay} Activation day: ${activationDay}`,
+      );
+      if (
+        this.currState.day >= activationDay &&
+        this.currState.day <= activationDay + event.duration
+      ) {
+        console.log(`event ${event.type.name} is active`);
+        return event;
+      }
+    }
+    console.log("no event is active");
+    return null;
+  }
+
+  updateSpecialEvent() {
+    const event = this.getActiveSpecialEvent();
+    if (event && !this.activeEvent) {
+      this.activeEvent = event;
+      event.type.activate(this.specialEffects, this.uiManager);
+    } else if (!event && this.activeEvent) {
+      const prevEvent = this.activeEvent;
+      this.activeEvent = null;
+      prevEvent.type.deactivate(this.specialEffects, this.uiManager);
+    }
   }
 
   setScenario() {
@@ -130,14 +167,16 @@ export class GameManager {
       this.currState.scenarioIndex,
       this.currState.day,
       this.currState.money,
+      this.currState.initialScenarioDay,
     );
-    // TODO: Check if special event active
-
+    this.updateSpecialEvent();
     this.uiManager.updateGameUI();
   }
 
   nextScenario() {
     this.currState.scenarioIndex++;
+    // Update the initial day of this scenario (used for event activation)
+    this.currState.initialScenarioDay = this.currState.day;
     this.setScenario();
   }
 
@@ -164,6 +203,7 @@ export class GameManager {
       dayWon: state.dayWon,
       gridState: state.gridState,
       scenarioIndex: state.scenarioIndex,
+      initialScenarioDay: state.initialScenarioDay,
     }));
     const savedState =
       this.currSave.gameStates[this.currSave.gameStates.length - 1];
@@ -174,6 +214,7 @@ export class GameManager {
       dayWon: savedState.dayWon,
       gridState: savedState.gridState,
       scenarioIndex: savedState.scenarioIndex,
+      initialScenarioDay: savedState.initialScenarioDay,
     };
     this.restoreGameState(this.currState);
   }
@@ -197,6 +238,7 @@ export class GameManager {
       dayWon: this.currState.dayWon,
       gridState: Array.from(this.grid.state), // Convert byte array to a regular array
       scenarioIndex: this.currState.scenarioIndex,
+      initialScenarioDay: this.currState.initialScenarioDay,
     };
     this.currSave.gameStates.push(gameState);
     this.saveToSlot("AutoSave");
@@ -254,15 +296,16 @@ export class GameManager {
   }
 
   nextDay() {
+    this.currState.day++;
+    this.updateSpecialEvent();
     this.grid.cells.forEach((row) =>
       row.forEach((cell) => {
         cell.updateFood();
         cell.updateFish(this);
-        cell.updatePopulation(this.currState.day, this.currSave.seed);
-        cell.updateSunlight(this.currState.day, this.currSave.seed);
+        cell.updatePopulation(this);
+        cell.updateSunlight(this);
       })
     );
-    this.currState.day++;
     this.uiManager.updateDayUI(this.currState.day);
     this.autoSave(true); // Autosave at the end of each day
   }
