@@ -38,9 +38,31 @@ For our game, Raul ended up being more the Design lead for this phase, as he cam
 
 ## Devlog Entry - F1
 ## How we satisfied the software requirements
+F[0] - no changes
+Byte Array Layout:
+-----------------------------------------------------
+| Cell(0,0) | Cell(0,1) | Cell(1,0) | Cell(1,1) ... |
+-----------------------------------------------------
+| Sun | Food | Pop | Fish[0] | Fish[1] | ... | Unused |
+-----------------------------------------------------
+                 ↓ Zoom In on a Single Cell
+Single Cell:
+-------------------------------------------------
+| Sunlight | Food | Population | Fish[0...n] ... |
+-------------------------------------------------
+|  1 Byte  | 1 Byte |   1 Byte   |  4 Bytes each  |
+-------------------------------------------------
+
+[F1.a] - The grid state is stored in an Array-of-Structures (AoS) format. Each cell stores sunlight, food, and fish populations as discrete fields in the byte array. Each fish occupies four bytes: fish type, growth, food, and value. The byte array is primary, and the grid is decoded from this byte array as needed.
+
+[F1.b] - Player is given buttons that allow them to manually save their progress and load it by specifying the names tied to the save. Multiple saves are supported and deletion as well. Save states are stored in localStorage. The player can see a list of all their saves.
+
+[F1.c] When the game starts, it checks if the player has an autosave and asks if they want to load that save. The game auto-saves  at the start of the game, end of each day, and whenever a player buys, sells, or moves fish.
+
+[F1.d] The player is given two buttons where they can  undo or redo any major decisions. gameStates stores the entire game after every major action. redoStacksallows redo operations making undo reversible.
 
 ## Reflection 
-
+Are team's plan hasn't changed much we didn't reconsider any of the tools or roles. We have been splitting the work up ignoring the roles we had. We haven;t focused much on game design as we have mainly been thinking about the software requirements.
 
 
 ## Devlog Entry - F2
@@ -49,6 +71,8 @@ For our game, Raul ended up being more the Design lead for this phase, as he cam
 ## Reflection
 
 ## Devlog Entry - F3
+F[0],F[1],F[2] - No changes
+
 ## How we satisfied the software requirements
 -[F3.a] The game must be internationalized in way that allows all text visible to the player to be translated into different written languages (i.e. there are no messages that are hard-coded to display only English-language text, but it is fine for this requirement if English is the only supported display language).
 For this step, we created a seperate ts file with a Record that used a key word and returned a string. We then made a helper file, which had a getText function, that would use the translation file and return the apporiate string via text.replace. In our ui-manager, we changed the instances where we just outputted text and instead used the getText function to get the text. 
