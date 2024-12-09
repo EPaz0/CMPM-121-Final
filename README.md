@@ -16,7 +16,7 @@ We are going to be using typescript and baseline web platforms because they are 
 ## Outlook
 One thing we anticipate being a hard part of the project is setting up our game visually while using HTML. Also, another thing we anticipate being hard/risky is having our game break during the switch if there is one. We are hoping to learn how to use our alternate platform PixieJS and also learn how to create a game without an engine.
 
-# Devlog Entry - F0
+## Devlog Entry - F0
 ## How we satisfied the software requirements
 - You control a character moving over a 2D grid.
 This was fairly easy to implement for our group. We created our game world by placing each square within a 2D array. The player movement code adjust the player positon by adding/subtracting 1 from a player's coordinates(col and row), which should correspond to a square within the array. If it would go out of bounds, then the player isn't moved. 
@@ -35,3 +35,25 @@ For our current build, the goal is just to acquire 500 points in cash, when the 
 
 ## Reflection
 For our game, Raul ended up being more the Design lead for this phase, as he came up with the structure for how the cells should be implemented. We went back and forth on how we should handle which resources should be purchasanble, and still think we might change it in future updates. We were trying to make it so that each fish pair, when they reproduce, have a chance to add a child to a neighboring tile, but weren't able to add it by the deadline. 
+
+## Devlog Entry - F1
+## How we satisfied the software requirements
+
+## Reflection 
+
+
+
+## Devlog Entry - F2
+## How we satisfied the software requirements
+
+## Reflection
+
+## Devlog Entry - F3
+## How we satisfied the software requirements
+-[F3.a] The game must be internationalized in way that allows all text visible to the player to be translated into different written languages (i.e. there are no messages that are hard-coded to display only English-language text, but it is fine for this requirement if English is the only supported display language).
+For this step, we created a seperate ts file with a Record that used a key word and returned a string. We then made a helper file, which had a getText function, that would use the translation file and return the apporiate string via text.replace. In our ui-manager, we changed the instances where we just outputted text and instead used the getText function to get the text. 
+-[F3.b] The game must be localized to support three different written languages. At least one language must use a logographic script, and at least one language must use a right-to-left script.
+We added a UI dropdown menu that allowed the user to select a language. Our helper file has a variable that tracks the langauge and returns the approraite language from our translation file. We chose English, Spanish, and Arabic for our supported languages. While we knew Spanish, we mostly relied on Brace to provide the list of translations for us, especially since none of us know how to read or type Aracbic. 
+
+## Reflection
+-In this phase, we didnt really stick to our roles since we were doing our best to accomplish the requirements in time. In order for the UI to fit correctly on the mobile version, we had to rework how the game got the dimensions of the screen. 
