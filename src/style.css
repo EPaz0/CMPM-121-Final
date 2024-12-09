@@ -11,6 +11,11 @@
   -webkit-text-size-adjust: 100%;
   margin-left: 20px;
 }
+#header {
+  margin-top: 100px; /* Moves the header down */
+  padding: 20px; /* Add some internal spacing */
+  text-align: left; /* Center-align the content */
+}
 
 canvas {
   border: 10px ridge burlywood;

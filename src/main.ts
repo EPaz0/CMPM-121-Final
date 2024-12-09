@@ -116,19 +116,22 @@ canvas.addEventListener("click", (event) => {
   gameManager.uiManager.popup.style.display = "block";
 });
 
-// Create a button container and style it
-const buttonContainer = document.createElement("div");
-buttonContainer.style.position = "absolute";
-buttonContainer.style.top = "10px"; // Adjust distance from the top
-buttonContainer.style.right = "10px"; // Adjust distance from the right
-buttonContainer.style.display = "flex";
-buttonContainer.style.flexDirection = "row"; // Keep buttons horizontal
-buttonContainer.style.gap = "10px"; // Add spacing between buttons
-document.body.appendChild(buttonContainer);
+// Create a container for undo and redo buttons
+const undoRedoContainer = document.createElement("div");
+undoRedoContainer.style.position = "absolute";
+undoRedoContainer.style.top = "30px"; // Space from the top
+undoRedoContainer.style.left = "10px"; // Align to the left
+undoRedoContainer.style.display = "flex"; // Use flexbox for horizontal layout
+undoRedoContainer.style.flexDirection = "row"; // Align buttons in a row
+undoRedoContainer.style.justifyContent = "flex-start"; // Align to the left
+undoRedoContainer.style.gap = "20px"; // Add horizontal spacing between buttons
+undoRedoContainer.style.paddingBottom = "10px"; // Add space below the container
+document.body.appendChild(undoRedoContainer);
 
+// Add Undo and Redo buttons
 createButton({
   text: "↩️", // Undo
-  div: buttonContainer,
+  div: undoRedoContainer,
   onClick: () => {
     gameManager.undo();
   },
@@ -136,11 +139,24 @@ createButton({
 
 createButton({
   text: "↪️", // Redo
-  div: buttonContainer,
+  div: undoRedoContainer,
   onClick: () => {
     gameManager.redo();
   },
 });
+
+// Create a button container and style itq
+const buttonContainer = document.createElement("div");
+buttonContainer.style.position = "absolute";
+buttonContainer.style.top = "80px"; // Adjust distance from the top
+buttonContainer.style.left = "10px"; // Adjust distance from the right
+buttonContainer.style.display = "flex";
+undoRedoContainer.style.justifyContent = "flex-start"; // Align to the left
+buttonContainer.style.flexDirection = "row"; // Keep buttons horizontal
+buttonContainer.style.gap = "10px"; // Add spacing between buttons
+document.body.appendChild(buttonContainer);
+
+
 
 const localizedButtonConfigs: {
   key: TranslationKeys;
