@@ -45,21 +45,7 @@ For our game, Raul ended up being more the Design lead for this phase, as he cam
 We changed our random generation to be deterministic, so that undoing and redoing would be predictable.
 
 ### F1.a
-```
-Byte Array Layout:
------------------------------------------------------
-| Cell(0,0) | Cell(0,1) | Cell(1,0) | Cell(1,1) ... |
------------------------------------------------------
-| Sun | Food | Pop | Fish[0] | Fish[1] | ... | Unused |
------------------------------------------------------
-                 ↓ Zoom In on a Single Cell
-Single Cell:
--------------------------------------------------
-| Sunlight | Food | Population | Fish[0...n] ... |
--------------------------------------------------
-|  1 Byte  | 1 Byte |   1 Byte   |  4 Bytes each  |
--------------------------------------------------
-```
+![F1.a data structure diagram](./byte.jpg)
 
 The grid state is stored in an Array-of-Structures (AoS) format. Each cell stores sunlight, food, and fish populations as discrete fields in the byte array. Each fish occupies four bytes: fish type, growth, food, and value. The byte array is primary, and the grid is decoded from this byte array as needed.
 
